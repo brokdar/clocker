@@ -21,6 +21,10 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+      run: | 
+        LOWERCASE_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        docker build . --file Dockerfile --tag ghcr.io/$LOWERCASE_REPO:latest
     - name: Push Docker image
-      run: docker push ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+      run: | 
+        LOWERCASE_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        docker push ghcr.io/${{ github.repository }}:latest
