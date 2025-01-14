@@ -1,19 +1,23 @@
-FROM python:3.12-slim
+# Build stage
+FROM ghcr.io/astral-sh/uv:python3.12-alpine AS builder
+WORKDIR /app
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+ADD . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+# Runtime stage
+FROM python:3.12-alpine
 WORKDIR /app
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Copy only the necessary files from builder
+COPY --from=builder --chown=app:app /app /app
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy the application files
-COPY . .
-
-# Install dependencies using uv
-RUN uv venv
-RUN uv sync --frozen
-
-# Expose the port the app runs on
-EXPOSE 8000
-
-# Run the application
-CMD ["uv", "run", "-m", "clocker"]
+CMD ["python", "-m", "clocker"]

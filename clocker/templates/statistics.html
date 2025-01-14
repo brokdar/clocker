@@ -82,12 +82,13 @@
                     {% if day %}
                     <a href="/entries/{{ day.date.strftime('%Y-%m-%d') }}/view?return_to=/statistics/{{ year }}/view"
                         class="day-cell
-                        {% if day.is_weekend %}day-weekend
-                        {% elif day.entry_type and day.entry_type.type == 'work' %}day-work
+                        {% if day.entry_type and day.entry_type.type == 'work' %}day-work
                         {% elif day.entry_type and day.entry_type.type == 'holiday' %}day-holiday
                         {% elif day.entry_type and day.entry_type.type == 'vacation' %}day-vacation
                         {% elif day.entry_type and day.entry_type.type == 'flextime' %}day-flextime
-                        {% elif day.entry_type and day.entry_type.type == 'sick' %}day-sick{% endif %}
+                        {% elif day.entry_type and day.entry_type.type == 'sick' %}day-sick
+                        {% elif day.is_weekend %}day-weekend
+                        {% endif %}
                         {% for violation in statistics.compliance_violations %}
                             {% if violation.day == day.date %}
                                 {% if violation.type == 'max_work_hours_exceeded' %}violation-max_work_hours
