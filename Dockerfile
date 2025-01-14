@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=$TARGETPLATFORM ghcr.io/astral-sh/uv:python3.12-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
