@@ -1,8 +1,6 @@
-FROM python:3.12-slim AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
+# Build stage
+FROM --platform=$TARGETPLATFORM ghcr.io/astral-sh/uv:python3.12-slim AS builder
 WORKDIR /app
-
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
@@ -12,11 +10,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 
-ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
+# Runtime stage
+FROM python:3.12-slim
+WORKDIR /app
+
+# Copy only the necessary files from builder
+COPY --from=builder --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Run the application
-CMD ["uv", "run", "-m", "clocker"]
+CMD ["python", "-m", "clocker"]
