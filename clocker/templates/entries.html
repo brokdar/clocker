@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clocker - Calendar Entry Details</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/entries.css') }}">
+</head>
+
+<body>
+    <div class="container details-container">
+        <div class="banner">
+            <h1 class="app-title">Calendar Entry Details</h1>
+            <a href="{{ request.query_params.get('return_to', '/calendar/' + date.year|string + '/' + date.month|string + '/view') }}"
+                class="nav-button">←</a>
+        </div>
+
+        <div id="errorMessage" class="error-message" hidden></div>
+
+        {% if compliance_violations %}
+        <div class="compliance-violations">
+            <h2>Compliance Violations</h2>
+            <div class="violations-list">
+                {% for violation in compliance_violations %}
+                <div class="violation-item violation-{{ violation.type }}">
+                    <div class="violation-header">
+                        <span class="violation-date">{{ violation.day.strftime('%Y-%m-%d') }}</span>
+                        <span class="violation-type">{{ violation.type | replace('_', ' ') | title }}</span>
+                    </div>
+                    <p class="violation-details">{{ violation.details }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form id="entryForm" class="details-form" method="POST" data-entry-exists="{{ 'true' if entry else 'false' }}">
+            <div class="details-header">
+                <div class="details-date">{{ date.strftime('%A, %B %d, %Y') }}</div>
+                <select name="entry_type" class="entry-type-select" id="entryType">
+                    <option value="work" {{ 'selected' if entry and entry.type=='work' }}>Work</option>
+                    <option value="sick" {{ 'selected' if entry and entry.type=='sick' }}>Sick</option>
+                    <option value="vacation" {{ 'selected' if entry and entry.type=='vacation' }}>Vacation</option>
+                    <option value="holiday" {{ 'selected' if entry and entry.type=='holiday' }}>Holiday</option>
+                    <option value="flextime" {{ 'selected' if entry and entry.type=='flextime' }}>Flextime</option>
+                </select>
+            </div>
+
+            <div id="timeLogSection" class="time-log-section" {{ 'hidden' if entry and entry.type !='work' and
+                entry.type !=None }}>
+                <table class="details-table" id="timeLogTable">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Pause</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timeLogBody">
+                        {% if entry and entry.logs %}
+                        {% for log in entry.logs %}
+                        <tr>
+                            <td>
+                                <div class="time-log" data-index="{{ loop.index0 }}">
+                                    <input type="hidden" name="logs[{{ loop.index0 }}].id"
+                                        value="{{ log.id if log else '' }}">
+                                    <select name="logs[{{ loop.index0 }}].type" class="log-type-select">
+                                        <option value="work" {{ 'selected' if log.type=='work' }}>Work</option>
+                                        <option value="travel" {{ 'selected' if log.type=='travel' }}>Travel</option>
+                                    </select>
+                                </div>
+                            </td>
+                            <td><input type="time" name="logs[{{ loop.index0 }}].start"
+                                    value="{{ display_service.format_time(log.start) }}" class="time-input" required>
+                            </td>
+                            <td><input type="time" name="logs[{{ loop.index0 }}].end"
+                                    value="{{ display_service.format_time(log.end) }}" class="time-input" required></td>
+                            <td><input type="time" name="logs[{{ loop.index0 }}].pause"
+                                    value="{{ display_service.format_timedelta(log.pause) }}" class="time-input"></td>
+                            <td class="duration">{{ display_service.format_timedelta(log.duration) }}</td>
+                            <td class="actions">
+                                <button type="button" class="remove-log-btn" onclick="removeTimeLog(this)">×</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+                <button type="button" class="add-log-btn" onclick="addTimeLog()">+ Add Time Log</button>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="submit-btn">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="{{ url_for('static', path='js/entries.js') }}"></script>
+</body>
+
+</html>

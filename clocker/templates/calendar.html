@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clocker - {{ display_service.month_name(view.current_month) }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/calendar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/toast.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <div class="banner">
+            <h1 class="app-title">Clocker</h1>
+            <div class="month-navigation">
+                <a href="/calendar/{{ view.prev_month.year }}/{{ view.prev_month.month }}/view" class="nav-button">←</a>
+                <span class="month-title">{{ display_service.month_name(view.current_month) }}</span>
+                <a href="/calendar/{{ view.next_month.year }}/{{ view.next_month.month }}/view" class="nav-button">→</a>
+            </div>
+        </div>
+
+        {% if view.statistics.compliance_violations %}
+        <div class="compliance-violations">
+            <h2>Compliance Violations</h2>
+            <div class="violations-list">
+                {% for violation in view.statistics.compliance_violations %}
+                <a href="/entries/{{ violation.day.strftime('%Y-%m-%d') }}/view?return_to=/calendar/{{ view.current_month.year }}/{{ view.current_month.month }}/view"
+                    class="violation-item violation-{{ violation.type }}">
+                    <div class="violation-header">
+                        <span class="violation-date">{{ violation.day.strftime('%Y-%m-%d') }}</span>
+                        <span class="violation-type">{{ violation.type | replace('_', ' ') | title }}</span>
+                    </div>
+                    <p class="violation-details">{{ violation.details }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <table class="calendar-table">
+            <thead>
+                <tr>
+                    <th>Weekday</th>
+                    <th>Date</th>
+                    <th data-tooltip="Type of entry (work, vacation, sick, holiday, flextime)">Type</th>
+                    <th data-tooltip="W: Work, T: Travel">Log</th>
+                    <th data-tooltip="Start time of work">Start</th>
+                    <th data-tooltip="End time of work">End</th>
+                    <th data-tooltip="Break duration">Pause</th>
+                    <th data-tooltip="Total working duration excluding breaks">Duration</th>
+                    <th data-tooltip="Difference from standard working hours">Flextime</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day, entry in view.days.items() %}
+                <tr class="{{ 'weekend' if display_service.is_weekend(day) }} 
+                           {% for violation in view.statistics.compliance_violations %}
+                           {% if violation.day == day %}violation-row violation-{{ violation.type }}{% endif %}
+                           {% endfor %}"
+                    onclick="window.location.href='/entries/{{ day.isoformat() }}/view?return_to=/calendar/{{ view.current_month.year }}/{{ view.current_month.month }}/view'"
+                    {% if entry %} data-entry="{{ entry.model_dump_json() }}" {% endif %}>
+                    <td>{{ display_service.get_weekday_name(day) }}</td>
+                    <td>{{ day.isoformat() }}</td>
+                    <td>
+                        {% if entry %}
+                        <span class="entry-type type-{{ entry.type }}">
+                            {{ entry.type }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if entry and entry.logs %}
+                        {% for log in entry.logs %}
+                        <span class="log-row">{{ log.type[0]|upper }}</span>
+                        {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if entry and entry.logs %}
+                        {% for log in entry.logs %}
+                        <span class="log-row">{{ display_service.format_time(log.start) }}</span>
+                        {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if entry and entry.logs %}
+                        {% for log in entry.logs %}
+                        <span class="log-row">{{ display_service.format_time(log.end) }}</span>
+                        {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if entry and entry.logs %}
+                        {% for log in entry.logs %}
+                        <span class="log-row">{{ display_service.format_timedelta(log.pause) if log.pause else "00:00"
+                            }}</span>
+                        {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if entry %}
+                        <span class="{% if entry.duration and entry.duration.total_seconds() > 36000 %}
+                                duration-critical
+                            {% endif %}">
+                            {{ display_service.format_timedelta(entry.duration) }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if entry %}
+                        {% set flextime = statistics_service.calculate_flextime(entry) %}
+                        {% if flextime is not none %}
+                        {% set difference_seconds = flextime.total_seconds() %}
+                        <div class="flextime-container">
+                            <div class="flextime-bar">
+                                {% if entry.duration %}
+                                {% set critical_threshold = 2 * 3600 %}
+                                {% set width_percentage = (difference_seconds / critical_threshold * 50)|abs %}
+                                {% set capped_width = 50 if width_percentage > 50 else width_percentage %}
+                                {% set bar_state = 'critical' if width_percentage > 50 else
+                                'over' if difference_seconds > 0 else
+                                'exact' if difference_seconds == 0 else 'under' %}
+                                <div class="flextime-center-line"></div>
+                                <div class="flextime-indicator flextime-{{ bar_state }}" style="left: {{ 50 }}%;
+                                        width: {{ capped_width }}%;
+                                        {% if difference_seconds < 0 %}
+                                        transform: translateX(-100%);
+                                        {% endif %}">
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <span class="
+                                {%- if difference_seconds > 2 * 3600 -%}
+                                    flextime-text-critical
+                                {%- elif difference_seconds > 0 -%}
+                                    flextime-text-positive
+                                {%- elif difference_seconds < 0 -%}
+                                    flextime-text-negative
+                                {%- else -%}
+                                    flextime-text-default
+                                {%- endif -%}">
+                                {{ display_service.format_timedelta(flextime) }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="monthly-summary">
+            <h2>Monthly Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-row">
+                    <div class="summary-item">
+                        <span class="summary-label">Work Days</span>
+                        <span class="summary-value">{{ view.statistics.entry_counts.work }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Work Hours</span>
+                        <span class="summary-value">
+                            {{ display_service.format_timedelta(view.statistics.total_work_hours) }}
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Net Flextime</span>
+                        <span class="summary-value 
+                            {% if view.statistics.flextime_balance.total_seconds() > 0 %}
+                                positive
+                            {% elif view.statistics.flextime_balance.total_seconds() < 0 %}
+                                negative
+                            {% endif %}">
+                            {{ display_service.format_timedelta(view.statistics.flextime_balance) }}
+                        </span>
+                    </div>
+                </div>
+                <div class="summary-row">
+                    <div class="summary-item">
+                        <span class="summary-label">Vacation Days</span>
+                        <span class="summary-value">
+                            {{ view.statistics.entry_counts.vacation }}
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Flex Days</span>
+                        <span class="summary-value">
+                            {{ view.statistics.entry_counts.flex_days }}
+                        </span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Sick Days</span>
+                        <span class="summary-value">
+                            {{ view.statistics.entry_counts.sick }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', path='js/calendar.js') }}"></script>
+</body>
+
+</html>
+
+</html>

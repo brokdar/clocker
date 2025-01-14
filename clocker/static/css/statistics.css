@@ -1,0 +1,276 @@
+/* Statistics Page Styles */
+.stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Banner with Navigation */
+.banner {
+    background-color: var(--primary-color);
+    margin: -1rem -1rem 2rem -1rem;
+    padding: 1.5rem;
+    color: white;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.stats-title {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.year-navigation {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-button {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.current-year {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 500;
+    min-width: 5rem;
+    text-align: center;
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.legend-color {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 4px;
+}
+
+.legend-work { background-color: var(--type-work-bg); }
+.legend-vacation { background-color: var(--type-vacation-bg); }
+.legend-holiday { background-color: var(--type-holiday-bg); }
+.legend-sick { background-color: var(--type-sick-bg); }
+.legend-flextime { background-color: var(--type-flextime-bg); }
+.legend-weekend { background-color: var(--bg-weekend); }
+
+/* Calendar Styling */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.month-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    font-size: 0.9rem;
+}
+
+.month-header {
+    background-color: var(--month-header-bg);
+    padding: 0.75rem;
+    text-decoration: none;
+    display: block;
+    transition: background-color 0.2s;
+}
+
+.month-header:hover {
+    background-color: var(--primary-hover);
+}
+
+.month-title {
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+    color: white;
+    margin: 0;
+}
+
+.weekdays-grid, .days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 0.2rem;
+    gap: 1px;
+}
+
+.weekdays-grid {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.5rem 0.2rem;
+}
+
+.weekday-label {
+    font-size: 0.75rem;
+    text-align: center;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.day-cell {
+    aspect-ratio: 1;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    border: 2px solid transparent; /* Add default transparent border */
+    text-decoration: none;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+a.day-cell:hover {
+    transform: scale(1.1);
+    opacity: 0.9;
+    cursor: pointer;
+}
+
+/* Violation borders */
+.violation-max_work_hours {
+    border-color: var(--violation-max-hours);
+}
+
+.violation-break_time {
+    border-color: var(--violation-break-time);
+}
+
+.violation-rest_period {
+    border-color: var(--violation-rest-period);
+}
+
+/* Day type colors */
+.day-weekend {
+    background-color: var(--bg-weekend);
+    color: var(--text-muted);
+}
+
+.day-work {
+    background-color: var(--type-work-bg);
+    color: var(--type-work-text);
+}
+
+.day-holiday {
+    background-color: var(--type-holiday-bg);
+    color: var(--type-holiday-text);
+}
+
+.day-vacation {
+    background-color: var(--type-vacation-bg);
+    color: var(--type-vacation-text);
+}
+
+.day-flextime {
+    background-color: var(--type-flextime-bg);
+    color: var(--type-flextime-text);
+}
+
+.day-sick {
+    background-color: var(--type-sick-bg);
+    color: var(--type-sick-text);
+}
+
+/* Statistics Cards */
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.stats-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.stats-card-header {
+    background-color: var(--stats-header-bg);
+    padding: 0.75rem 1.25rem;
+}
+
+.stats-card-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: white;
+    margin: 0;
+}
+
+.stats-card-content {
+    padding: 1.25rem;
+}
+
+.stats-list {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.stats-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.stats-label {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.stats-value {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.stats-value.positive {
+    color: var(--success);
+}
+
+.stats-value.negative {
+    color: var(--error);
+}

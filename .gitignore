@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+clocker.db
+clocker/script/__init__.py
+clocker/script/__main__.py
+clocker/script/migrate.py
+db/._2024.json
+db/._clocker.json
+db/2022.json
+db/2022.json.bak
+db/2023.json
+db/2024.json
+db/clocker.json
+.vscode/launch.json

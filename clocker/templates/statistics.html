@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clocker - Annual Statistics {{ year }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/statistics.css') }}">
+</head>
+
+<body>
+    <div class="stats-container">
+        <div class="banner">
+            <h1 class="stats-title">Yearly Summary</h1>
+            <div class="year-navigation">
+                <a href="/statistics/{{ year - 1 }}/view" class="nav-button">←</a>
+                <span class="current-year">{{ year }}</span>
+                <a href="/statistics/{{ year + 1}}/view" class="nav-button">→</a>
+            </div>
+        </div>
+
+        {% if statistics.compliance_violations %}
+        <div class="compliance-violations">
+            <h2>Compliance Violations</h2>
+            <div class="violations-list">
+                {% for violation in statistics.compliance_violations %}
+                <a href="/entries/{{ violation.day.strftime('%Y-%m-%d') }}/view?return_to=/statistics/{{ year }}/view"
+                    class="violation-item violation-{{ violation.type }}">
+                    <div class="violation-header">
+                        <span class="violation-date">{{ violation.day.strftime('%Y-%m-%d') }}</span>
+                        <span class="violation-type">{{ violation.type | replace('_', ' ') | title }}</span>
+                    </div>
+                    <p class="violation-details">{{ violation.details }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color legend-work"></div>
+                <span>Work</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-vacation"></div>
+                <span>Vacation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-holiday"></div>
+                <span>Holiday</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-sick"></div>
+                <span>Sick Leave</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-flextime"></div>
+                <span>Flex Time</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-weekend"></div>
+                <span>Weekend</span>
+            </div>
+        </div>
+
+        <div class="calendar-grid">
+            {% for month in months %}
+            <div class="month-card">
+                <a href="/calendar/{{ year }}/{{ month.number }}/view" class="month-header">
+                    <h3 class="month-title">{{ month.name }}</h3>
+                </a>
+                <div class="weekdays-grid">
+                    {% for day in ['M', 'T', 'W', 'T', 'F', 'S', 'S'] %}
+                    <div class="weekday-label">{{ day }}</div>
+                    {% endfor %}
+                </div>
+                <div class="days-grid">
+                    {% for day in month.days %}
+                    {% if day %}
+                    <a href="/entries/{{ day.date.strftime('%Y-%m-%d') }}/view?return_to=/statistics/{{ year }}/view"
+                        class="day-cell
+                        {% if day.is_weekend %}day-weekend
+                        {% elif day.entry_type and day.entry_type.type == 'work' %}day-work
+                        {% elif day.entry_type and day.entry_type.type == 'holiday' %}day-holiday
+                        {% elif day.entry_type and day.entry_type.type == 'vacation' %}day-vacation
+                        {% elif day.entry_type and day.entry_type.type == 'flextime' %}day-flextime
+                        {% elif day.entry_type and day.entry_type.type == 'sick' %}day-sick{% endif %}
+                        {% for violation in statistics.compliance_violations %}
+                            {% if violation.day == day.date %}
+                                {% if violation.type == 'max_work_hours_exceeded' %}violation-max_work_hours
+                                {% elif violation.type == 'break_time_violation' %}violation-break_time
+                                {% elif violation.type == 'insufficient_rest_period' %}violation-rest_period
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}">
+                        {{ day.day }}
+                    </a>
+                    {% else %}
+                    <div class="day-cell"></div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="stats-summary">
+            <div class="stats-card">
+                <div class="stats-card-header">
+                    <h2 class="stats-card-title">Day Counts</h2>
+                </div>
+                <div class="stats-card-content">
+                    <div class="stats-list">
+                        <div class="stats-item">
+                            <span class="stats-label">Work Days</span>
+                            <span class="stats-value">{{ statistics.entry_counts.work }}</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Vacation Days</span>
+                            <span class="stats-value">{{ statistics.entry_counts.vacation }}</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Holiday Days</span>
+                            <span class="stats-value">{{ statistics.entry_counts.holiday }}</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Sick Days</span>
+                            <span class="stats-value">{{ statistics.entry_counts.sick }}</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Flex Days</span>
+                            <span class="stats-value">{{ statistics.entry_counts.flex_days }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <div class="stats-card-header">
+                    <h2 class="stats-card-title">Work Hours</h2>
+                </div>
+                <div class="stats-card-content">
+                    <div class="stats-list">
+                        <div class="stats-item">
+                            <span class="stats-label">Total Hours</span>
+                            <span class="stats-value">{{ display_service.format_timedelta(statistics.total_work_hours)
+                                }}</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Flex-time Balance</span>
+                            <span
+                                class="stats-value {% if statistics.flextime_balance.total_seconds() >= 0 %}positive{% else %}negative{% endif %}">
+                                {{ display_service.format_timedelta(statistics.flextime_balance) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
