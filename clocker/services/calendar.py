@@ -99,6 +99,12 @@ class Calendar:
         end_date = date(year, 12, 31)
 
         entries = await self._repository.get_by_date_range(start_date, end_date)
+        if not any(
+            entry.type == CalendarEntryType.HOLIDAY for entry in entries.values()
+        ):
+            holiday_entries = await self.add_public_holidays(year, "BW")
+            entries.update({entry.day: entry for entry in holiday_entries})
+
         logger.debug(
             f"Retrieved calendar entries of {year}", extra={"entries": entries}
         )
@@ -246,10 +252,9 @@ class Calendar:
                 continue
 
             entry = CalendarEntry(day=day, type=CalendarEntryType.HOLIDAY, logs=[])
-            saved_entry = await self._repository.save(entry)
-            entries.append(saved_entry)
+            entries.append(entry)
 
-        return entries
+        return await self._repository.save_all(entries)
 
     def iterate(self, start: date, end: date) -> Iterator[date]:
         """Iterate over all dates in a range.
