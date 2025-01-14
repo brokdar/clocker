@@ -20,7 +20,9 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/brokdar/clocker:latest
-    - name: Push Docker image
-      run: docker push ghcr.io/brokdar/clocker:latest
+    - name: Build and push Docker image
+      uses: uses: docker/build-push-action@v6.11.0
+      with:
+        context: .
+        push: true
+        tags: ghcr.io/${{ github.repository }}:latest
