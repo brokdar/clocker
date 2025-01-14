@@ -21,10 +21,6 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build Docker image
-      run: | 
-        LOWERCASE_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-        docker build . --file Dockerfile --tag ghcr.io/$LOWERCASE_REPO:latest
+      run: docker build . --file Dockerfile --tag ghcr.io/brokdar/clocker:latest
     - name: Push Docker image
-      run: | 
-        LOWERCASE_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-        docker push ghcr.io/${{ github.repository }}:latest
+      run: docker push ghcr.io/brokdar/clocker:latest
