@@ -177,8 +177,10 @@
             <div class="summary-grid">
                 <div class="summary-row">
                     <div class="summary-item">
-                        <span class="summary-label">Work Days</span>
-                        <span class="summary-value">{{ view.statistics.entry_counts.work }}</span>
+                        <span class="summary-label">Work Days (Travel Days)</span>
+                        <span class="summary-value">
+                            {{ view.statistics.entry_counts.work }} ({{ view.statistics.entry_counts.travel }})
+                        </span>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Total Work Hours</span>

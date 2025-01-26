@@ -35,6 +35,7 @@ class TypeCount(BaseModel):
     vacation: int = 0
     holiday: int = 0
     sick: int = 0
+    travel: int = 0
 
 
 class Statistics(BaseModel):
@@ -143,6 +144,10 @@ class StatisticsService:
                     type_counts.holiday += 1
                 case CalendarEntryType.SICK:
                     type_counts.sick += 1
+
+            # Count travel days
+            if any(log.type == TimeLogType.TRAVEL for log in entry.logs):
+                type_counts.travel += 1
 
             # Calculate work time and check compliance
             if entry.type in {CalendarEntryType.WORK, CalendarEntryType.FLEXTIME}:
