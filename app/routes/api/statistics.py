@@ -1,13 +1,10 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import get_calendar, get_statistics_service
-from app.model import CalendarEntryResponse
 from app.services.calendar import Calendar
-from app.services.statistics import StatisticsService
+from app.services.statistics import Statistics, StatisticsService
 
 router = APIRouter(prefix="/statistics", tags=["Statistics"])
 
@@ -17,7 +14,7 @@ async def get_statistics(
     year: int = Query(default_factory=lambda: date.today().year),
     calendar: Calendar = Depends(get_calendar),
     statistics_service: StatisticsService = Depends(get_statistics_service),
-) -> JSONResponse:
+) -> Statistics:
     """Retrieve statistics data for an entire year.
 
     Calculates comprehensive statistics for all entries in the specified year.
@@ -28,31 +25,11 @@ async def get_statistics(
         statistics_service (StatisticsService): Service for calculating statistics.
 
     Returns:
-        JSONResponse: JSON containing yearly entries, statistics and metadata.
+        Statistics: JSON containing statistics data for the specified year.
     """
     try:
         entries = await calendar.get_year(year)
-        statistics = statistics_service.calculate_statistics(entries.values())
-        items: dict[str, CalendarEntryResponse] = {}
-        for day, entry in entries.items():
-            items[day.isoformat()] = CalendarEntryResponse.model_validate(entry)
+        return statistics_service.calculate_statistics(entries.values())
 
-        return JSONResponse(
-            {
-                "success": True,
-                "data": {
-                    "entries": jsonable_encoder(items),
-                    "statistics": jsonable_encoder(statistics),
-                    "metadata": {"year": year, "total_entries": len(entries)},
-                },
-                "message": f"Successfully retrieved statistics for {year}",
-            }
-        )
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": {"code": "SERVER_ERROR", "message": str(e)},
-            },
-        )
+        raise HTTPException(status_code=500, detail=str(e)) from e

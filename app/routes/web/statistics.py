@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from app.dependencies import get_calendar, get_statistics_service
-from app.model import CalendarEntry, CalendarEntryResponse
+from app.model import CalendarEntry
 from app.services.calendar import Calendar
 from app.services.display import DisplayService
 from app.services.statistics import StatisticsService
@@ -26,7 +26,7 @@ class DayData:
 
     day: int
     date: date
-    entry_type: CalendarEntryResponse | None = None
+    entry_type: CalendarEntry | None = None
     is_weekend: bool = False
 
 
@@ -114,9 +114,7 @@ def _get_all_month(year: int, entries: dict[date, CalendarEntry]) -> list[MonthD
                 DayData(
                     day=day,
                     date=current_date,
-                    entry_type=CalendarEntryResponse.model_validate(entry)
-                    if entry
-                    else None,
+                    entry_type=entry or None,
                     is_weekend=current_date.weekday() >= 5,
                 )
             )

@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from app.dependencies import get_calendar, get_statistics_service
-from app.model import CalendarEntryResponse
+from app.model import CalendarEntry
 from app.services.calendar import Calendar, get_month_range
 from app.services.display import DisplayService
 from app.services.statistics import Statistics, StatisticsService
 
 from . import templates
 
-router = APIRouter(prefix="/calendar", tags=["Calendar"])
+router = APIRouter(prefix="/calendar")
 
 
 @dataclass
@@ -23,7 +23,7 @@ class MonthView:
     entries for each day, navigation dates, and monthly statistics.
     """
 
-    days: dict[date, CalendarEntryResponse | None]
+    days: dict[date, CalendarEntry | None]
     current_month: date
     prev_month: date
     next_month: date
@@ -62,12 +62,10 @@ async def view_calendar(
     start, end = get_month_range(year, month)
 
     entries = await calendar.get_month(year, month)
-    days_of_month: dict[date, CalendarEntryResponse | None] = {}
+    days_of_month: dict[date, CalendarEntry | None] = {}
     for day in calendar.iterate(start, end):
         entry = entries.get(day)
-        days_of_month[day] = (
-            CalendarEntryResponse.model_validate(entry) if entry is not None else None
-        )
+        days_of_month[day] = entry or None
 
     statistics = statistics_service.calculate_statistics(entries.values())
 

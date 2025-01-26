@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 
 from app.model import (
     CalendarEntry,
-    CalendarEntryResponse,
     CalendarEntryType,
     TimeLogType,
 )
@@ -71,9 +70,7 @@ class StatisticsService:
         """
         self.config = config
 
-    def calculate_flextime(
-        self, entry: CalendarEntry | CalendarEntryResponse
-    ) -> timedelta | None:
+    def calculate_flextime(self, entry: CalendarEntry) -> timedelta | None:
         """Calculate the flextime of the entry.
 
         Args:

@@ -1,20 +1,51 @@
-from datetime import date, timedelta
+from datetime import date
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.dependencies import get_calendar, get_statistics_service
+from app.dependencies import get_calendar
 from app.model import (
-    CalendarEntryCreate,
-    CalendarEntryResponse,
+    CalendarEntryBase,
     CalendarEntryType,
-    CalendarEntryUpdate,
+    TimeLogBase,
 )
 from app.services import time_logger
-from app.services.calendar import Calendar, get_month_range
-from app.services.statistics import StatisticsService
+from app.services.calendar import Calendar
 from app.services.time_logger import TimeLogError
+
+
+class TimeLogResponse(TimeLogBase):
+    """Response model of a time log."""
+
+    id: int
+
+
+class TimeLogCreate(TimeLogBase):
+    """Query model for creating a time log."""
+
+
+class TimeLogUpdate(TimeLogBase):
+    """Query model for updating a time log."""
+
+    id: int | None = None
+
+
+class CalendarEntryResponse(CalendarEntryBase):
+    """Response model of a calendar entry."""
+
+    logs: list[TimeLogResponse]
+
+
+class CalendarEntryCreate(CalendarEntryBase):
+    """Query model for creating a calendar entry."""
+
+    logs: list[TimeLogCreate] = []
+
+
+class CalendarEntryUpdate(CalendarEntryBase):
+    """Query model for updating a calendar entry."""
+
+    logs: list[TimeLogUpdate] = []
+
 
 router = APIRouter(prefix="/entries", tags=["entries"])
 
@@ -24,98 +55,51 @@ async def list_entries(
     year: int = Query(default_factory=lambda: date.today().year),
     month: int = Query(default_factory=lambda: date.today().month),
     calendar: Calendar = Depends(get_calendar),
-    statistic_service: StatisticsService = Depends(get_statistics_service),
-) -> JSONResponse:
+) -> list[CalendarEntryResponse]:
     """Retrieve all calendar entries for a specific month.
 
     Args:
         year (int): The year to fetch entries for. Defaults to current year.
         month (int): The month to fetch entries for (1-12). Defaults to current month.
         calendar (Calendar): Calendar service for data access.
-        statistic_service (StatisticsService): Service for calculating statistics.
 
     Returns:
-        JSONResponse: JSON containing entries, statistics and metadata for the month.
+        list[CalendarEntryResponse]: JSON containing all entries for the specified month.
     """
     try:
         entries = await calendar.get_month(year, month)
-        start, end = get_month_range(year, month)
+        return [
+            CalendarEntryResponse.model_validate(entry) for entry in entries.values()
+        ]
 
-        statistics = statistic_service.calculate_statistics(entries.values())
-        items: dict[str, CalendarEntryResponse] = {}
-        for day in calendar.iterate(start, end):
-            if day in entries:
-                items[day.isoformat()] = CalendarEntryResponse.model_validate(
-                    entries[day]
-                )
-
-        return JSONResponse(
-            {
-                "success": True,
-                "data": {
-                    "entries": jsonable_encoder(items),
-                    "statistics": jsonable_encoder(statistics),
-                    "metadata": {
-                        "year": year,
-                        "month": month,
-                        "total_entries": len(items),
-                    },
-                },
-                "message": f"Successfully retrieved entries for {year}-{month}",
-            }
-        )
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": {"code": "SERVER_ERROR", "message": str(e)},
-            },
-        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
 
 
 @router.get("/{date}")
 async def get_entry(
     date: date,
     calendar: Calendar = Depends(get_calendar),
-    statistic_service: StatisticsService = Depends(get_statistics_service),
-) -> JSONResponse:
+) -> CalendarEntryResponse:
     """Retrieve a single calendar entry by date.
 
     Args:
         date (date): The date of the entry to retrieve.
         calendar (Calendar): Calendar service for data access.
-        statistic_service (StatisticsService): Service for compliance checks.
 
     Returns:
-        JSONResponse: JSON containing the entry data and compliance violations if found.
+        CalendarEntryResponse: JSON containing the calendar entry.
     """
     entry = await calendar.get_by_date(date)
     if not entry:
-        return JSONResponse(
-            status_code=404,
-            content={
-                "success": False,
-                "error": {
-                    "code": "NOT_FOUND",
-                    "message": f"No entry found for day {date}",
-                },
-            },
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No entry found for day {date}",
         )
 
-    previous_entry = await calendar.get_by_date(date - timedelta(days=1))
-    compliance_violations = statistic_service.compliance_check(entry, previous_entry)
-    entry_response = CalendarEntryResponse.model_validate(entry)
-    return JSONResponse(
-        {
-            "success": True,
-            "data": {
-                "entry": jsonable_encoder(entry_response),
-                "compliance_violations": jsonable_encoder(compliance_violations),
-            },
-            "message": "Entry retrieved successfully",
-        }
-    )
+    return CalendarEntryResponse.model_validate(entry)
 
 
 @router.post("/{date}")
@@ -123,7 +107,7 @@ async def create_entry(
     date: date,
     data: CalendarEntryCreate,
     calendar: Calendar = Depends(get_calendar),
-) -> JSONResponse:
+) -> CalendarEntryResponse:
     """Create a new calendar entry for a specific date.
 
     Args:
@@ -132,19 +116,13 @@ async def create_entry(
         calendar (Calendar): Calendar service for data access.
 
     Returns:
-        JSONResponse: JSON containing the created entry or error details.
+        CalendarEntryResponse: JSON containing the created entry or error details.
     """
     existing_entry = await calendar.get_by_date(date)
     if existing_entry is not None:
-        return JSONResponse(
-            status_code=409,
-            content={
-                "success": False,
-                "error": {
-                    "code": "ENTRY_EXISTS",
-                    "message": f"Entry already exists for date {date}",
-                },
-            },
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Entry already exists for date {date}",
         )
 
     try:
@@ -152,24 +130,12 @@ async def create_entry(
         for log in data.logs:
             time_logger.add_time_log(entry, log.type, log.start, log.end, log.pause)
         entry = await calendar.update_entry(entry)
-        entry_response = CalendarEntryResponse.model_validate(entry)
-        return JSONResponse(
-            {
-                "success": True,
-                "data": jsonable_encoder(entry_response),
-                "message": "Entry created successfully",
-            }
-        )
-
+        return CalendarEntryResponse.model_validate(entry)
     except TimeLogError as e:
         await calendar.remove_entry(date)
-        return JSONResponse(
-            status_code=400,
-            content={
-                "success": False,
-                "error": {"code": "TIME_LOG_ERROR", "message": str(e)},
-            },
-        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
 
 
 @router.patch("/{date}")
@@ -177,7 +143,7 @@ async def update_entry(
     date: date,
     data: CalendarEntryUpdate,
     calendar: Calendar = Depends(get_calendar),
-) -> JSONResponse:
+) -> CalendarEntryResponse:
     """Update an existing calendar entry.
 
     Args:
@@ -186,19 +152,13 @@ async def update_entry(
         calendar (Calendar): Calendar service for data access.
 
     Returns:
-        JSONResponse: JSON containing the updated entry or error details.
+        CalendarEntryResponse: JSON containing the updated entry or error details.
     """
     entry = await calendar.get_by_date(date)
     if not entry:
-        return JSONResponse(
-            status_code=404,
-            content={
-                "success": False,
-                "error": {
-                    "code": "NOT_FOUND",
-                    "message": f"No entry found for date {date}",
-                },
-            },
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No entry found for date {date}",
         )
 
     if entry.type != data.type:
@@ -206,14 +166,7 @@ async def update_entry(
         if entry.type != CalendarEntryType.WORK:
             entry.logs = []
             entry = await calendar.update_entry(entry)
-            entry_response = CalendarEntryResponse.model_validate(entry)
-            return JSONResponse(
-                {
-                    "success": True,
-                    "data": jsonable_encoder(entry_response),
-                    "message": "Entry updated successfully",
-                }
-            )
+            return CalendarEntryResponse.model_validate(entry)
 
     try:
         existing_logs = {log.id: log for log in entry.logs if log.id is not None}
@@ -234,30 +187,19 @@ async def update_entry(
             entry.logs.remove(existing_log)
 
         entry = await calendar.update_entry(entry)
-        entry_response = CalendarEntryResponse.model_validate(entry)
-        return JSONResponse(
-            {
-                "success": True,
-                "data": jsonable_encoder(entry_response),
-                "message": "Entry updated successfully",
-            }
-        )
+        return CalendarEntryResponse.model_validate(entry)
     except TimeLogError as e:
         await calendar.reset_entry(entry)
-        return JSONResponse(
-            status_code=400,
-            content={
-                "success": False,
-                "error": {"code": "TIME_LOG_ERROR", "message": str(e)},
-            },
-        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
 
 
 @router.delete("/{date}")
 async def delete_entry(
     date: date,
     calendar: Calendar = Depends(get_calendar),
-) -> JSONResponse:
+) -> CalendarEntryResponse:
     """Delete a calendar entry for a specific date.
 
     Args:
@@ -265,31 +207,14 @@ async def delete_entry(
         calendar (Calendar): Calendar service for data access.
 
     Returns:
-        JSONResponse: JSON containing the deleted entry or error details.
+        CalendarEntryResponse: JSON containing the deleted entry or error details.
     """
     try:
         entry = await calendar.remove_entry(date)
-        entry_response = CalendarEntryResponse.model_validate(entry)
-        return JSONResponse(
-            {
-                "success": True,
-                "data": jsonable_encoder(entry_response),
-                "message": f"Successfully deleted {entry.type} entry for {date}",
-            }
-        )
+        return CalendarEntryResponse.model_validate(entry)
     except ValueError as e:
-        return JSONResponse(
-            status_code=404,
-            content={
-                "success": False,
-                "error": {"code": "NOT_FOUND", "message": str(e)},
-            },
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": {"code": "SERVER_ERROR", "message": str(e)},
-            },
-        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
