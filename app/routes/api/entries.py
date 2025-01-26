@@ -1,0 +1,220 @@
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from app.dependencies import get_calendar
+from app.model import (
+    CalendarEntryBase,
+    CalendarEntryType,
+    TimeLogBase,
+)
+from app.services import time_logger
+from app.services.calendar import Calendar
+from app.services.time_logger import TimeLogError
+
+
+class TimeLogResponse(TimeLogBase):
+    """Response model of a time log."""
+
+    id: int
+
+
+class TimeLogCreate(TimeLogBase):
+    """Query model for creating a time log."""
+
+
+class TimeLogUpdate(TimeLogBase):
+    """Query model for updating a time log."""
+
+    id: int | None = None
+
+
+class CalendarEntryResponse(CalendarEntryBase):
+    """Response model of a calendar entry."""
+
+    logs: list[TimeLogResponse]
+
+
+class CalendarEntryCreate(CalendarEntryBase):
+    """Query model for creating a calendar entry."""
+
+    logs: list[TimeLogCreate] = []
+
+
+class CalendarEntryUpdate(CalendarEntryBase):
+    """Query model for updating a calendar entry."""
+
+    logs: list[TimeLogUpdate] = []
+
+
+router = APIRouter(prefix="/entries", tags=["entries"])
+
+
+@router.get("/")
+async def list_entries(
+    year: int = Query(default_factory=lambda: date.today().year),
+    month: int = Query(default_factory=lambda: date.today().month),
+    calendar: Calendar = Depends(get_calendar),
+) -> list[CalendarEntryResponse]:
+    """Retrieve all calendar entries for a specific month.
+
+    Args:
+        year (int): The year to fetch entries for. Defaults to current year.
+        month (int): The month to fetch entries for (1-12). Defaults to current month.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        list[CalendarEntryResponse]: JSON containing all entries for the specified month.
+    """
+    try:
+        entries = await calendar.get_month(year, month)
+        return [
+            CalendarEntryResponse.model_validate(entry) for entry in entries.values()
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
+
+
+@router.get("/{date}")
+async def get_entry(
+    date: date,
+    calendar: Calendar = Depends(get_calendar),
+) -> CalendarEntryResponse:
+    """Retrieve a single calendar entry by date.
+
+    Args:
+        date (date): The date of the entry to retrieve.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        CalendarEntryResponse: JSON containing the calendar entry.
+    """
+    entry = await calendar.get_by_date(date)
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No entry found for day {date}",
+        )
+
+    return CalendarEntryResponse.model_validate(entry)
+
+
+@router.post("/{date}")
+async def create_entry(
+    date: date,
+    data: CalendarEntryCreate,
+    calendar: Calendar = Depends(get_calendar),
+) -> CalendarEntryResponse:
+    """Create a new calendar entry for a specific date.
+
+    Args:
+        date (date): The date for the new entry.
+        data (CalendarEntryCreate): The entry data including type and time logs.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        CalendarEntryResponse: JSON containing the created entry or error details.
+    """
+    existing_entry = await calendar.get_by_date(date)
+    if existing_entry is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Entry already exists for date {date}",
+        )
+
+    try:
+        entry = await calendar.create_entry(date, data.type)
+        for log in data.logs:
+            time_logger.add_time_log(entry, log.type, log.start, log.end, log.pause)
+        entry = await calendar.update_entry(entry)
+        return CalendarEntryResponse.model_validate(entry)
+    except TimeLogError as e:
+        await calendar.remove_entry(date)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+
+
+@router.patch("/{date}")
+async def update_entry(
+    date: date,
+    data: CalendarEntryUpdate,
+    calendar: Calendar = Depends(get_calendar),
+) -> CalendarEntryResponse:
+    """Update an existing calendar entry.
+
+    Args:
+        date (date): The date of the entry to update.
+        data (CalendarEntryUpdate): Updated entry data including type and time logs.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        CalendarEntryResponse: JSON containing the updated entry or error details.
+    """
+    entry = await calendar.get_by_date(date)
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No entry found for date {date}",
+        )
+
+    if entry.type != data.type:
+        entry.type = data.type
+        if entry.type != CalendarEntryType.WORK:
+            entry.logs = []
+            entry = await calendar.update_entry(entry)
+            return CalendarEntryResponse.model_validate(entry)
+
+    try:
+        existing_logs = {log.id: log for log in entry.logs if log.id is not None}
+        for log in data.logs:
+            if log.id and log.id in existing_logs:
+                # Handle updated existing time logs
+                log_index = entry.logs.index(existing_logs[log.id])
+                time_logger.update_time_log(
+                    entry, log_index, log.type, log.start, log.end, log.pause
+                )
+                del existing_logs[log.id]  # mark as handled
+            else:
+                # Handle new time logs
+                time_logger.add_time_log(entry, log.type, log.start, log.end, log.pause)
+
+        # Handle all removed time logs
+        for existing_log in existing_logs.values():
+            entry.logs.remove(existing_log)
+
+        entry = await calendar.update_entry(entry)
+        return CalendarEntryResponse.model_validate(entry)
+    except TimeLogError as e:
+        await calendar.reset_entry(entry)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+
+
+@router.delete("/{date}")
+async def delete_entry(
+    date: date,
+    calendar: Calendar = Depends(get_calendar),
+) -> CalendarEntryResponse:
+    """Delete a calendar entry for a specific date.
+
+    Args:
+        date (date): The date of the entry to delete.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        CalendarEntryResponse: JSON containing the deleted entry or error details.
+    """
+    try:
+        entry = await calendar.remove_entry(date)
+        return CalendarEntryResponse.model_validate(entry)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e

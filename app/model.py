@@ -9,7 +9,7 @@ from typing import NamedTuple, Self
 from pydantic import field_validator, model_validator
 from sqlmodel import Field, Relationship, SQLModel
 
-from clocker.utils import timely
+from app.utils import timely
 
 
 class CalendarEntryType(StrEnum):
@@ -102,22 +102,6 @@ class TimeLog(TimeLogBase, table=True):
     day: date | None = Field(default=None, foreign_key="calendar_entry.day")
 
 
-class TimeLogResponse(TimeLogBase):
-    """Response model of a time log."""
-
-    id: int
-
-
-class TimeLogCreate(TimeLogBase):
-    """Query model for creating a time log."""
-
-
-class TimeLogUpdate(TimeLogBase):
-    """Query model for updating a time log."""
-
-    id: int | None = None
-
-
 class CalendarEntryBase(SQLModel):
     """Base model of a calendar entry."""
 
@@ -156,40 +140,6 @@ class CalendarEntry(CalendarEntryBase, table=True):
     def pause_time(self) -> timedelta | None:
         """Returns the total pause time of the calendar entry."""
         return calculate_pause_time(self.logs, self.type)
-
-
-class CalendarEntryResponse(CalendarEntryBase):
-    """Response model of a calendar entry."""
-
-    logs: list[TimeLogResponse]
-
-    @field_validator("logs", check_fields=False)
-    @classmethod
-    def validate_logs(cls, logs: list[TimeLog]) -> list[TimeLog]:
-        """Validates the time logs."""
-        return validate_time_logs(logs)
-
-    @property
-    def duration(self) -> timedelta | None:
-        """Returns the total duration of the calendar entry."""
-        return calculate_duration(self.logs, self.type)
-
-    @property
-    def pause_time(self) -> timedelta | None:
-        """Returns the total pause time of the calendar entry."""
-        return calculate_pause_time(self.logs, self.type)
-
-
-class CalendarEntryCreate(CalendarEntryBase):
-    """Query model for creating a calendar entry."""
-
-    logs: list[TimeLogCreate] = []
-
-
-class CalendarEntryUpdate(CalendarEntryBase):
-    """Query model for updating a calendar entry."""
-
-    logs: list[TimeLogUpdate] = []
 
 
 class TimePair(NamedTuple):

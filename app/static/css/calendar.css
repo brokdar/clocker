@@ -17,13 +17,30 @@ body {
 
 /* Banner Component */
 .banner {
-    background-color: #1a73e8;
+    background-color: var(--primary-color);
     margin: -24px -24px 24px -24px;
     padding: 24px;
     color: white;
     border-radius: 8px 8px 0 0;
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+}
+
+.banner-left {
+    flex: 1;
+}
+
+.banner-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.banner-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
     align-items: center;
 }
 
@@ -63,6 +80,22 @@ body {
 
 .nav-button:hover {
     background-color: rgba(255, 255, 255, 0.3);
+}
+
+.yearly-stats-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+.yearly-stats-button:hover {
+    opacity: 1;
+}
+.yearly-stats-button svg {
+    width: 16px;
+    height: 16px;
 }
 
 /* Calendar Table */

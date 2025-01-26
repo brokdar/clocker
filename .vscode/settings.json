@@ -11,6 +11,7 @@
     "scm.defaultViewMode": "tree",
     "python.analysis.diagnosticMode": "workspace",
     "cSpell.words": [
+        "jsonable",
         "pydantic"
     ],
     "[jsonc]": {

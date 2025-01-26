@@ -4,16 +4,13 @@ from datetime import date
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
-from clocker.model import CalendarEntryResponse
-from clocker.routes import (
-    get_adjacent_months,
-    get_calendar,
-    get_statistics_service,
-    templates,
-)
-from clocker.services.calendar import Calendar, get_month_range
-from clocker.services.display import DisplayService
-from clocker.services.statistics import Statistics, StatisticsService
+from app.dependencies import get_calendar, get_statistics_service
+from app.model import CalendarEntry
+from app.services.calendar import Calendar, get_month_range
+from app.services.display import DisplayService
+from app.services.statistics import Statistics, StatisticsService
+
+from . import templates
 
 router = APIRouter(prefix="/calendar")
 
@@ -26,7 +23,7 @@ class MonthView:
     entries for each day, navigation dates, and monthly statistics.
     """
 
-    days: dict[date, CalendarEntryResponse | None]
+    days: dict[date, CalendarEntry | None]
     current_month: date
     prev_month: date
     next_month: date
@@ -65,12 +62,10 @@ async def view_calendar(
     start, end = get_month_range(year, month)
 
     entries = await calendar.get_month(year, month)
-    days_of_month: dict[date, CalendarEntryResponse | None] = {}
+    days_of_month: dict[date, CalendarEntry | None] = {}
     for day in calendar.iterate(start, end):
         entry = entries.get(day)
-        days_of_month[day] = (
-            CalendarEntryResponse.model_validate(entry) if entry is not None else None
-        )
+        days_of_month[day] = entry or None
 
     statistics = statistics_service.calculate_statistics(entries.values())
 
@@ -91,3 +86,27 @@ async def view_calendar(
             "statistics_service": statistics_service,
         },
     )
+
+
+def get_adjacent_months(current_date: date) -> tuple[date, date]:
+    """Calculate the previous and next month dates for navigation.
+
+    Handles year transitions correctly for December/January.
+
+    Args:
+        current_date (date): Reference date to calculate adjacent months for.
+
+    Returns:
+        tuple[date, date]: Tuple containing (previous_month, next_month) dates.
+    """
+    if current_date.month == 1:
+        prev_month = date(current_date.year - 1, 12, 1)
+    else:
+        prev_month = date(current_date.year, current_date.month - 1, 1)
+
+    if current_date.month == 12:
+        next_month = date(current_date.year + 1, 1, 1)
+    else:
+        next_month = date(current_date.year, current_date.month + 1, 1)
+
+    return prev_month, next_month

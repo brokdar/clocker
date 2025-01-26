@@ -3,7 +3,7 @@ from datetime import time, timedelta
 
 from pydantic import ValidationError
 
-from clocker.model import (
+from app.model import (
     CalendarEntry,
     CalendarEntryType,
     TimeLog,

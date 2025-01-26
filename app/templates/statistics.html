@@ -116,8 +116,10 @@
                 <div class="stats-card-content">
                     <div class="stats-list">
                         <div class="stats-item">
-                            <span class="stats-label">Work Days</span>
-                            <span class="stats-value">{{ statistics.entry_counts.work }}</span>
+                            <span class="stats-label">Work Days (Travel Days)</span>
+                            <span class="stats-value">
+                                {{ statistics.entry_counts.work }} ({{ statistics.entry_counts.travel }})
+                            </span>
                         </div>
                         <div class="stats-item">
                             <span class="stats-label">Vacation Days</span>
