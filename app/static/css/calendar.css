@@ -17,13 +17,30 @@ body {
 
 /* Banner Component */
 .banner {
-    background-color: #1a73e8;
+    background-color: var(--primary-color);
     margin: -24px -24px 24px -24px;
     padding: 24px;
     color: white;
     border-radius: 8px 8px 0 0;
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+}
+
+.banner-left {
+    flex: 1;
+}
+
+.banner-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.banner-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
     align-items: center;
 }
 

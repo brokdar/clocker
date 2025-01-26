@@ -14,11 +14,19 @@
 <body>
     <div class="container">
         <div class="banner">
-            <h1 class="app-title">Clocker</h1>
-            <div class="month-navigation">
-                <a href="/calendar/{{ view.prev_month.year }}/{{ view.prev_month.month }}/view" class="nav-button">←</a>
-                <span class="month-title">{{ display_service.month_name(view.current_month) }}</span>
-                <a href="/calendar/{{ view.next_month.year }}/{{ view.next_month.month }}/view" class="nav-button">→</a>
+            <div class="banner-left">
+                <h1 class="app-title">Clocker</h1>
+            </div>
+            <div class="banner-center">
+                <div class="month-navigation">
+                    <a href="/calendar/{{ view.prev_month.year }}/{{ view.prev_month.month }}/view"
+                        class="nav-button">←</a>
+                    <span class="month-title">{{ display_service.month_name(view.current_month) }}</span>
+                    <a href="/calendar/{{ view.next_month.year }}/{{ view.next_month.month }}/view"
+                        class="nav-button">→</a>
+                </div>
+            </div>
+            <div class="banner-right">
                 <a href="/statistics/{{ view.current_month.year }}/view" class="nav-button yearly-stats-button"
                     title="View Yearly Statistics">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
