@@ -91,7 +91,7 @@ function formatErrorMessage(data) {
 
 async function pasteEntry(targetDate) {  
     try {
-        const response = await fetch(`/entries/${targetDate}`, {
+        const response = await fetch(`/api/v1/entries/${targetDate}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ async function deleteEntry(dateStr) {
     if (!confirmed) return;
     
     try {
-        const response = await fetch(`/entries/${dateStr}`, {
+        const response = await fetch(`/api/v1/entries/${dateStr}`, {
             method: 'DELETE'
         });
 

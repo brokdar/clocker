@@ -1,18 +1,14 @@
 from collections.abc import AsyncGenerator
-from datetime import date
 from pathlib import Path
 
 import yaml
-from fastapi.templating import Jinja2Templates
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from clocker.database import CalendarRepository, engine
-from clocker.services.calendar import Calendar
-from clocker.services.statistics import StatisticsConfiguration, StatisticsService
+from app.database import CalendarRepository, engine
+from app.services.calendar import Calendar
+from app.services.statistics import StatisticsConfiguration, StatisticsService
 
 CONFIG_PATH = Path("/app/data/config.yaml")
-
-templates = Jinja2Templates(directory="clocker/templates")
 
 
 def get_statistics_service() -> StatisticsService:
@@ -42,27 +38,3 @@ async def get_calendar() -> AsyncGenerator[Calendar, None]:
         repository = CalendarRepository(session)
         yield Calendar(repository)
         await session.flush()
-
-
-def get_adjacent_months(current_date: date) -> tuple[date, date]:
-    """Calculate the previous and next month dates for navigation.
-
-    Handles year transitions correctly for December/January.
-
-    Args:
-        current_date (date): Reference date to calculate adjacent months for.
-
-    Returns:
-        tuple[date, date]: Tuple containing (previous_month, next_month) dates.
-    """
-    if current_date.month == 1:
-        prev_month = date(current_date.year - 1, 12, 1)
-    else:
-        prev_month = date(current_date.year, current_date.month - 1, 1)
-
-    if current_date.month == 12:
-        next_month = date(current_date.year + 1, 1, 1)
-    else:
-        next_month = date(current_date.year, current_date.month + 1, 1)
-
-    return prev_month, next_month

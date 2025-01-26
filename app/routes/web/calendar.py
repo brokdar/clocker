@@ -4,18 +4,15 @@ from datetime import date
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
-from clocker.model import CalendarEntryResponse
-from clocker.routes import (
-    get_adjacent_months,
-    get_calendar,
-    get_statistics_service,
-    templates,
-)
-from clocker.services.calendar import Calendar, get_month_range
-from clocker.services.display import DisplayService
-from clocker.services.statistics import Statistics, StatisticsService
+from app.dependencies import get_calendar, get_statistics_service
+from app.model import CalendarEntryResponse
+from app.services.calendar import Calendar, get_month_range
+from app.services.display import DisplayService
+from app.services.statistics import Statistics, StatisticsService
 
-router = APIRouter(prefix="/calendar")
+from . import templates
+
+router = APIRouter(prefix="/calendar", tags=["Calendar"])
 
 
 @dataclass
@@ -91,3 +88,27 @@ async def view_calendar(
             "statistics_service": statistics_service,
         },
     )
+
+
+def get_adjacent_months(current_date: date) -> tuple[date, date]:
+    """Calculate the previous and next month dates for navigation.
+
+    Handles year transitions correctly for December/January.
+
+    Args:
+        current_date (date): Reference date to calculate adjacent months for.
+
+    Returns:
+        tuple[date, date]: Tuple containing (previous_month, next_month) dates.
+    """
+    if current_date.month == 1:
+        prev_month = date(current_date.year - 1, 12, 1)
+    else:
+        prev_month = date(current_date.year, current_date.month - 1, 1)
+
+    if current_date.month == 12:
+        next_month = date(current_date.year + 1, 1, 1)
+    else:
+        next_month = date(current_date.year, current_date.month + 1, 1)
+
+    return prev_month, next_month

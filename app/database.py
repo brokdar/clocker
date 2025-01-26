@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from clocker.model import CalendarEntry
+from app.model import CalendarEntry
 
 DATABASE_PATH = Path("/app/data/clocker.db")
 DATABASE_URL = (

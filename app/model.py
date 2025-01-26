@@ -9,7 +9,7 @@ from typing import NamedTuple, Self
 from pydantic import field_validator, model_validator
 from sqlmodel import Field, Relationship, SQLModel
 
-from clocker.utils import timely
+from app.utils import timely
 
 
 class CalendarEntryType(StrEnum):

@@ -2,15 +2,16 @@ import calendar
 from dataclasses import dataclass
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse
 
-from clocker.model import CalendarEntry, CalendarEntryResponse
-from clocker.routes import get_calendar, get_statistics_service, templates
-from clocker.services.calendar import Calendar
-from clocker.services.display import DisplayService
-from clocker.services.statistics import StatisticsService
+from app.dependencies import get_calendar, get_statistics_service
+from app.model import CalendarEntry, CalendarEntryResponse
+from app.services.calendar import Calendar
+from app.services.display import DisplayService
+from app.services.statistics import StatisticsService
+
+from . import templates
 
 router = APIRouter(prefix="/statistics")
 
@@ -122,49 +123,3 @@ def _get_all_month(year: int, entries: dict[date, CalendarEntry]) -> list[MonthD
 
         months.append(MonthData(name=month_name, number=month, days=days))
     return months
-
-
-@router.get("/")
-async def get_statistics(
-    year: int = Query(default_factory=lambda: date.today().year),
-    calendar: Calendar = Depends(get_calendar),
-    statistics_service: StatisticsService = Depends(get_statistics_service),
-) -> JSONResponse:
-    """Retrieve statistics data for an entire year.
-
-    Calculates comprehensive statistics for all entries in the specified year.
-
-    Args:
-        year (int): The year to calculate statistics for. Defaults to current year.
-        calendar (Calendar): Calendar service for data access.
-        statistics_service (StatisticsService): Service for calculating statistics.
-
-    Returns:
-        JSONResponse: JSON containing yearly entries, statistics and metadata.
-    """
-    try:
-        entries = await calendar.get_year(year)
-        statistics = statistics_service.calculate_statistics(entries.values())
-        items: dict[str, CalendarEntryResponse] = {}
-        for day, entry in entries.items():
-            items[day.isoformat()] = CalendarEntryResponse.model_validate(entry)
-
-        return JSONResponse(
-            {
-                "success": True,
-                "data": {
-                    "entries": jsonable_encoder(items),
-                    "statistics": jsonable_encoder(statistics),
-                    "metadata": {"year": year, "total_entries": len(entries)},
-                },
-                "message": f"Successfully retrieved statistics for {year}",
-            }
-        )
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": {"code": "SERVER_ERROR", "message": str(e)},
-            },
-        )

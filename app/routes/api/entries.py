@@ -1,23 +1,22 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 
-from clocker.model import (
+from app.dependencies import get_calendar, get_statistics_service
+from app.model import (
     CalendarEntryCreate,
     CalendarEntryResponse,
     CalendarEntryType,
     CalendarEntryUpdate,
 )
-from clocker.routes import get_calendar, get_statistics_service, templates
-from clocker.services import time_logger
-from clocker.services.calendar import Calendar, get_month_range
-from clocker.services.display import DisplayService
-from clocker.services.statistics import ComplianceViolation, StatisticsService
-from clocker.services.time_logger import TimeLogError
+from app.services import time_logger
+from app.services.calendar import Calendar, get_month_range
+from app.services.statistics import StatisticsService
+from app.services.time_logger import TimeLogError
 
-router = APIRouter(prefix="/entries")
+router = APIRouter(prefix="/entries", tags=["entries"])
 
 
 @router.get("/")
@@ -73,44 +72,6 @@ async def list_entries(
                 "error": {"code": "SERVER_ERROR", "message": str(e)},
             },
         )
-
-
-@router.get("/{date}/view", response_class=HTMLResponse)
-async def view_entry(
-    request: Request,
-    date: date,
-    calendar: Calendar = Depends(get_calendar),
-    statistic_service: StatisticsService = Depends(get_statistics_service),
-) -> HTMLResponse:
-    """Render the HTML view for a specific calendar entry.
-
-    Args:
-        request (Request): The incoming request object.
-        date (date): The date of the entry to view.
-        calendar (Calendar): Calendar service for data access.
-        statistic_service (StatisticsService): Service for compliance checks.
-
-    Returns:
-        HTMLResponse: Rendered HTML template with entry details and compliance status.
-    """
-    compliance_violations: list[ComplianceViolation] = []
-    entry = await calendar.get_by_date(date)
-    if entry:
-        previous_entry = await calendar.get_by_date(date - timedelta(days=1))
-        compliance_violations = statistic_service.compliance_check(
-            entry, previous_entry
-        )
-
-    return templates.TemplateResponse(
-        "entries.html",
-        {
-            "request": request,
-            "date": date,
-            "entry": CalendarEntryResponse.model_validate(entry) if entry else None,
-            "compliance_violations": compliance_violations,
-            "display_service": DisplayService(),
-        },
-    )
 
 
 @router.get("/{date}")

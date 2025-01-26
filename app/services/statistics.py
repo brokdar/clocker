@@ -4,7 +4,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
-from clocker.model import (
+from app.model import (
     CalendarEntry,
     CalendarEntryResponse,
     CalendarEntryType,

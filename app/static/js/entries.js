@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorMessage.setAttribute('hidden', '');
         
         try {
-            const apiPath = window.location.pathname.replace('/view', '');
+            const apiPath = `/api/v1${window.location.pathname.replace('/view', '')}`;
             const method = isExistingEntry ? 'PATCH' : 'POST';
             const response = await fetch(apiPath, {
                 method,

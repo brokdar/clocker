@@ -5,8 +5,8 @@ from datetime import date, timedelta
 
 import holidays
 
-from clocker.database import CalendarRepository
-from clocker.model import (
+from app.database import CalendarRepository
+from app.model import (
     CalendarEntry,
     CalendarEntryType,
 )

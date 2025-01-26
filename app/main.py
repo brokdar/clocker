@@ -1,15 +1,14 @@
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from clocker.database import create_database
-from clocker.routes import calendar, entries, statistics
+from app import APP_PATH
+from app.database import create_database
+from app.routes import api_router, web_router
 
 
 @asynccontextmanager
@@ -32,18 +31,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(lifespan=lifespan)
 app.mount(
     "/static",
-    StaticFiles(directory=Path(__file__).parent.absolute() / "static"),
+    StaticFiles(directory=APP_PATH / "static"),
     name="static",
 )
-app.include_router(calendar.router)
-app.include_router(entries.router)
-app.include_router(statistics.router)
-
-
-@app.route("/")
-def index(request: Request) -> RedirectResponse:
-    """Route for the index page."""
-    return RedirectResponse("/calendar/view")
+app.include_router(api_router)
+app.include_router(web_router)
 
 
 if __name__ == "__main__":
