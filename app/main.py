@@ -1,8 +1,6 @@
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -36,7 +34,3 @@ app.mount(
 )
 app.include_router(api_router)
 app.include_router(web_router)
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host=os.getenv("HOST", "127.0.0.1"), port=8000)

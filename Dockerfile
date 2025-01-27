@@ -20,4 +20,4 @@ WORKDIR /app
 COPY --from=builder --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["python", "-m", "clocker"]
+CMD ["fastapi", "run", "app/main.py"]
