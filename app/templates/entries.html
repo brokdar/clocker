@@ -49,6 +49,24 @@
                 </select>
             </div>
 
+            <div class="range-section">
+                <label class="range-checkbox">
+                    <input type="checkbox" id="applyToRange" {{ 'disabled' if entry }}>
+                    <span>Apply to date range</span>
+                </label>
+                <div id="rangeInputs" class="range-inputs" hidden>
+                    <div class="range-input-group">
+                        <label for="fromDate">From:</label>
+                        <input type="date" id="fromDate" name="from_date" value="{{ date.isoformat() }}">
+                    </div>
+                    <div class="range-input-group">
+                        <label for="toDate">To:</label>
+                        <input type="date" id="toDate" name="to_date" value="{{ date.isoformat() }}">
+                    </div>
+                    <div class="range-preview" id="rangePreview"></div>
+                </div>
+            </div>
+
             <div id="timeLogSection" class="time-log-section" {{ 'hidden' if entry and entry.type !='work' and
                 entry.type !=None }}>
                 <table class="details-table" id="timeLogTable">
