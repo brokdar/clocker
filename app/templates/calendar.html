@@ -75,6 +75,7 @@
             <tbody>
                 {% for day, entry in view.days.items() %}
                 <tr class="{{ 'weekend' if display_service.is_weekend(day) }}
+                           {% if day == view.today %}current-date{% endif %}
                            {% for violation in view.statistics.compliance_violations %}
                            {% if violation.day == day %}violation-row violation-{{ violation.type }}{% endif %}
                            {% endfor %}"

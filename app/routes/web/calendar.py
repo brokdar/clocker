@@ -28,6 +28,7 @@ class MonthView:
     prev_month: date
     next_month: date
     statistics: Statistics
+    today: date
 
 
 @router.get("/view", response_class=HTMLResponse)
@@ -69,12 +70,14 @@ async def view_calendar(
 
     statistics = statistics_service.calculate_statistics(entries.values())
 
+    today = date.today()
     view = MonthView(
         days=days_of_month,
         current_month=requested_date,
         prev_month=prev_month,
         next_month=next_month,
         statistics=statistics,
+        today=today,
     )
 
     return templates.TemplateResponse(

@@ -73,6 +73,7 @@ async def view_statistics(
     display = DisplayService()
     months = _get_all_month(year, entries)
 
+    today = date.today()
     return templates.TemplateResponse(
         "statistics.html",
         {
@@ -81,6 +82,7 @@ async def view_statistics(
             "months": months,
             "statistics": statistics,
             "display_service": display,
+            "today": today,
         },
     )
 

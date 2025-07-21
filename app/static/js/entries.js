@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </td>
             <td><input type="time" name="logs[${newIndex}].start" class="time-input" required></td>
             <td><input type="time" name="logs[${newIndex}].end" class="time-input" required></td>
-            <td><input type="time" name="logs[${newIndex}].pause" class="time-input"></td>
+            <td><input type="time" name="logs[${newIndex}].pause" class="time-input" value="00:00"></td>
             <td class="duration"></td>
             <td>
                 <button type="button" class="remove-log-btn" onclick="removeTimeLog(this)">×</button>

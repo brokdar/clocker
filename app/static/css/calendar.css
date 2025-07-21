@@ -363,3 +363,23 @@ tr[data-duration="over"] .flextime-indicator {
 .calendar-table tbody tr.violation-row:hover::before {
     opacity: 1;
 }
+
+/* Current Date Highlighting */
+.calendar-table tbody tr.current-date {
+    background-color: rgba(26, 115, 232, 0.05);
+    box-shadow: inset 3px 0 0 var(--primary-color);
+}
+
+.calendar-table tbody tr.current-date:hover {
+    background-color: rgba(26, 115, 232, 0.1);
+}
+
+/* Current date with compliance violations - violations take precedence for border */
+.calendar-table tbody tr.current-date.violation-row {
+    /* Keep the violation border-left, add current date styling via box-shadow */
+    box-shadow: inset 0 0 0 1px rgba(26, 115, 232, 0.3);
+}
+
+.calendar-table tbody tr.current-date.violation-row:hover {
+    box-shadow: inset 0 0 0 1px rgba(26, 115, 232, 0.4);
+}

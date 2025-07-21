@@ -942,3 +942,4 @@ db/clocker.json
 .mypy_cache/3.12/zoneinfo/_common.meta.json
 .mypy_cache/3.12/zoneinfo/_tzpath.data.json
 .mypy_cache/3.12/zoneinfo/_tzpath.meta.json
+.DS_Store
