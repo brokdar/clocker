@@ -82,6 +82,7 @@
                     {% if day %}
                     <a href="/entries/{{ day.date.strftime('%Y-%m-%d') }}/view?return_to=/statistics/{{ year }}/view"
                         class="day-cell
+                        {% if day.date == today %}current-date{% endif %}
                         {% if day.entry_type and day.entry_type.type == 'work' %}day-work
                         {% elif day.entry_type and day.entry_type.type == 'holiday' %}day-holiday
                         {% elif day.entry_type and day.entry_type.type == 'vacation' %}day-vacation
