@@ -29,7 +29,7 @@ Clocker is a time tracking FastAPI application that allows users to log work hou
 - `uv run fastapi dev app/main.py` - Development server with hot reload
 - `uv run fastapi run app/main.py` - Production server
 - `docker build -t clocker .` - Build Docker image
-- `docker run -p 8000:8000 clocker` - Run containerized application
+- `docker run -d --name clocker -p 8000:8000 clocker` - Run containerized application
 
 ## Architecture
 
