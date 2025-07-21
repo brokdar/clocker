@@ -45,7 +45,7 @@ function showConfirmDialog(message) {
             background: rgba(0, 0, 0, 0.5);
             z-index: 9999;
         `;
-        
+
         const dialog = document.createElement('div');
         dialog.style.cssText = `
             background: white;
@@ -73,9 +73,9 @@ function showConfirmDialog(message) {
 
         dialog.querySelector('.confirm-yes').onclick = () => handleClose(true);
         dialog.querySelector('.confirm-no').onclick = () => handleClose(false);
-        
+
         dialog.querySelector('.confirm-yes').focus();
-        
+
         wrapper.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') handleClose(false);
         });
@@ -89,7 +89,7 @@ function formatErrorMessage(data) {
     return 'An unexpected error occurred';
 }
 
-async function pasteEntry(targetDate) {  
+async function pasteEntry(targetDate) {
     try {
         const response = await fetch(`/api/v1/entries/${targetDate}`, {
             method: 'POST',
@@ -118,15 +118,15 @@ async function pasteEntry(targetDate) {
 async function deleteEntry(dateStr) {
     const hoveredRow = document.querySelector('tr:hover');
     if (!hoveredRow) return;
-    
+
     const entryType = hoveredRow.querySelector('.entry-type')?.textContent.trim() || 'entry';
-    
+
     const confirmed = await showConfirmDialog(
         `Are you sure you want to delete this ${entryType} from ${dateStr}?`
     );
-    
+
     if (!confirmed) return;
-    
+
     try {
         const response = await fetch(`/api/v1/entries/${dateStr}`, {
             method: 'DELETE'

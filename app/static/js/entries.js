@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const start = new Date(`1970-01-01T${startInput.value}`);
             const end = new Date(`1970-01-01T${endInput.value}`);
             let diffMinutes = (end - start) / 1000 / 60;
-            
+
             const pauseMinutes = getMinutesFromTimeInput(pauseInput);
             diffMinutes -= pauseMinutes;
 
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         const errorMessage = document.getElementById('errorMessage');
         errorMessage.setAttribute('hidden', '');
-        
+
         try {
             const apiPath = `/api/v1${window.location.pathname.replace('/view', '')}`;
             const method = isExistingEntry ? 'PATCH' : 'POST';
