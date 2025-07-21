@@ -195,6 +195,49 @@ async def update_entry(
         ) from e
 
 
+@router.post("/{target_date}/copy")
+async def copy_entry(
+    target_date: date,
+    source_date: date = Query(..., description="The date to copy from"),
+    calendar: Calendar = Depends(get_calendar),
+) -> CalendarEntryResponse:
+    """Copy a calendar entry from source date to target date.
+
+    Args:
+        target_date (date): The date to copy the entry to.
+        source_date (date): The date to copy the entry from.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        CalendarEntryResponse: JSON containing the copied entry or error details.
+    """
+    try:
+        entry = await calendar.get_by_date(source_date)
+        if not entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No entry found for source date {source_date}",
+            )
+
+        # Extract log data while still in async context to avoid lazy loading issues
+        log_data = [(log.type, log.start, log.end, log.pause) for log in entry.logs]
+
+        new_entry = await calendar.create_entry(target_date, entry.type)
+        for log_type, start, end, pause in log_data:
+            time_logger.add_time_log(new_entry, log_type, start, end, pause)
+
+        new_entry = await calendar.update_entry(new_entry)
+        return CalendarEntryResponse.model_validate(new_entry)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
+
+
 @router.delete("/{date}")
 async def delete_entry(
     date: date,

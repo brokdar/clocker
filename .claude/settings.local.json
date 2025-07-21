@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(uv run:*)",
+      "mcp__sequentialthinking__sequentialthinking"
+    ],
+    "deny": []
+  }
+}

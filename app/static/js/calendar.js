@@ -2,7 +2,30 @@ const toastContainer = document.createElement('div');
 toastContainer.className = 'toast-container';
 document.body.appendChild(toastContainer);
 
-let copiedEntry = null;
+let copiedDate = null;
+
+// Load copied date from localStorage on page load
+function loadCopiedDate() {
+    const stored = localStorage.getItem('copiedDate');
+    if (stored) {
+        copiedDate = stored;
+    }
+}
+
+// Save copied date to localStorage
+function saveCopiedDate(date) {
+    copiedDate = date;
+    localStorage.setItem('copiedDate', date);
+}
+
+// Clear copied date from localStorage
+function clearCopiedDate() {
+    copiedDate = null;
+    localStorage.removeItem('copiedDate');
+}
+
+// Initialize on page load
+loadCopiedDate();
 let lastToast = null;
 
 function showToast(message, type = 'info', duration = 3000) {
@@ -45,7 +68,7 @@ function showConfirmDialog(message) {
             background: rgba(0, 0, 0, 0.5);
             z-index: 9999;
         `;
-        
+
         const dialog = document.createElement('div');
         dialog.style.cssText = `
             background: white;
@@ -73,9 +96,9 @@ function showConfirmDialog(message) {
 
         dialog.querySelector('.confirm-yes').onclick = () => handleClose(true);
         dialog.querySelector('.confirm-no').onclick = () => handleClose(false);
-        
+
         dialog.querySelector('.confirm-yes').focus();
-        
+
         wrapper.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') handleClose(false);
         });
@@ -89,18 +112,13 @@ function formatErrorMessage(data) {
     return 'An unexpected error occurred';
 }
 
-async function pasteEntry(targetDate) {  
+async function pasteEntry(targetDate) {
     try {
-        const response = await fetch(`/api/v1/entries/${targetDate}`, {
+        const response = await fetch(`/api/v1/entries/${targetDate}/copy?source_date=${copiedDate}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                day: targetDate,
-                type: copiedEntry.type,
-                logs: copiedEntry.logs
-            })
+            }
         });
 
         const data = await response.json();
@@ -118,15 +136,15 @@ async function pasteEntry(targetDate) {
 async function deleteEntry(dateStr) {
     const hoveredRow = document.querySelector('tr:hover');
     if (!hoveredRow) return;
-    
+
     const entryType = hoveredRow.querySelector('.entry-type')?.textContent.trim() || 'entry';
-    
+
     const confirmed = await showConfirmDialog(
         `Are you sure you want to delete this ${entryType} from ${dateStr}?`
     );
-    
+
     if (!confirmed) return;
-    
+
     try {
         const response = await fetch(`/api/v1/entries/${dateStr}`, {
             method: 'DELETE'
@@ -172,9 +190,10 @@ document.addEventListener('keydown', async (e) => {
         }
 
         try {
-            copiedEntry = JSON.parse(entryJson);
+            const entry = JSON.parse(entryJson);
             const date = hoveredRow.querySelector('td:nth-child(2)').textContent.trim();
-            showToast(`Entry copied from ${date} (${copiedEntry.type})`, 'success', 5000);
+            saveCopiedDate(date);
+            showToast(`Entry copied from ${date} (${entry.type})`, 'success', 5000);
         } catch (error) {
             console.error('Error parsing entry data:', error);
             showToast('PARSE_ERROR: Invalid entry data format', 'error');
@@ -183,7 +202,7 @@ document.addEventListener('keydown', async (e) => {
 
     // Paste functionality (Ctrl + V)
     if (e.ctrlKey && e.key === 'v') {
-        if (!copiedEntry) {
+        if (!copiedDate) {
             showToast('VALIDATION_ERROR: No entry has been copied yet', 'error');
             return;
         }
