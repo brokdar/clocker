@@ -1,56 +1,43 @@
 {
-  "name": "Clocker Environment",
-  "dockerFile": "Dockerfile",
-  "workspaceFolder": "/workspace",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "charliermarsh.ruff",
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "ms-azuretools.vscode-docker",
-        "formulahendry.auto-rename-tag",
-        "aaron-bond.better-comments",
-        "njpwerner.autodocstring",
-        "streetsidesoftware.code-spell-checker",
-        "fill-labs.dependi",
-        "tamasfe.even-better-toml",
-        "github.vscode-github-actions",
-        "DavidAnson.vscode-markdownlint",
-        "eamodio.gitlens",
-        "ms-vscode.powershell",
-        "ms-python.debugpy",
-        "ms-vscode.test-adapter-converter",
-        "hbenl.vscode-test-explorer",
-        "redhat.vscode-yaml",
-        "GitHub.copilot-chat",
-        "GitHub.codespaces",
-        "ms-python.mypy-type-checker",
-        "Anthropic.claude-code",
-        "exiasr.hadolint",
-        "bierner.markdown-mermaid",
-        "bpruitt-goddard.mermaid-markdown-syntax-highlighting"
-      ],
-      "settings": {
-        "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
-        "python.linting.enabled": true,
-        "python.linting.ruffEnabled": true,
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-          "source.fixAll": "always",
-          "source.organizeImports": "always"
-        },
-        "terminal.integrated.defaultProfile.linux": "bash"
-      }
-    }
-  },
-  "postCreateCommand": ".devcontainer/startup.sh",
-  "remoteUser": "vscode",
-  "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-    "ghcr.io/dhoeric/features/hadolint:1": {}
-  }
+	"name": "Python 3",
+	"image": "mcr.microsoft.com/devcontainers/python:2-3.12-bullseye",
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/devcontainers-extra/features/curl-apt-get:1": {}
+	},
+	"postCreateCommand": "./.devcontainer/startup.sh",
+	"forwardPorts": [
+		8000
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"charliermarsh.ruff",
+				"formulahendry.auto-rename-tag",
+				"aaron-bond.better-comments",
+				"njpwerner.autodocstring",
+				"streetsidesoftware.code-spell-checker",
+				"fill-labs.dependi",
+				"tamasfe.even-better-toml",
+				"github.vscode-github-actions",
+				"DavidAnson.vscode-markdownlint",
+				"eamodio.gitlens",
+				"ms-vscode.powershell",
+				"ms-python.debugpy",
+				"ms-vscode.test-adapter-converter",
+				"hbenl.vscode-test-explorer",
+				"redhat.vscode-yaml",
+				"GitHub.copilot-chat",
+				"GitHub.codespaces",
+				"ms-python.mypy-type-checker",
+				"MermaidChart.vscode-mermaid-chart",
+				"Anthropic.claude-code"
+			]
+		}
+	}
 }

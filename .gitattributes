@@ -1,0 +1,17 @@
+# Ensure Git normalizes line endings for common text files
+# Keep shell scripts with LF so shebangs work in containers
+*.sh text eol=lf
+
+# Python, Markdown, JSON, YAML and Dockerfiles should use LF
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+
+# Allow Windows batch files to keep CRLF where appropriate
+*.bat text eol=crlf
+
+# Let Git auto-detect other text files
+* text=auto

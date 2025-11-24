@@ -2,17 +2,16 @@
 set -e
 
 echo "🚀 Initializing development environment..."
+npm install -g @anthropic-ai/claude-code
 
-# Configure Git safe directory
-echo "🔒 Configuring Git safe directory..."
-git config --global --add safe.directory /workspace
+echo "🔧 Installing dependencies..."
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Initialize backend
-echo "📦 Setting up backend..."
+echo "📦 Setting up uv..."
 uv sync
 
-# Initialize pre-commit hooks
 echo "🔧 Setting up pre-commit hooks..."
+pip install pre-commit
 pre-commit install
 pre-commit autoupdate
 

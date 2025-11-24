@@ -170,6 +170,14 @@ async def update_entry(
 
     try:
         existing_logs = {log.id: log for log in entry.logs if log.id is not None}
+        log_ids_in_request = {log.id for log in data.logs if log.id is not None}
+
+        # Handle all removed time logs first
+        for existing_log in list(existing_logs.values()):
+            if existing_log.id not in log_ids_in_request:
+                entry.logs.remove(existing_log)
+
+        # Then handle updates and additions
         for log in data.logs:
             if log.id and log.id in existing_logs:
                 # Handle updated existing time logs
@@ -177,14 +185,9 @@ async def update_entry(
                 time_logger.update_time_log(
                     entry, log_index, log.type, log.start, log.end, log.pause
                 )
-                del existing_logs[log.id]  # mark as handled
             else:
                 # Handle new time logs
                 time_logger.add_time_log(entry, log.type, log.start, log.end, log.pause)
-
-        # Handle all removed time logs
-        for existing_log in existing_logs.values():
-            entry.logs.remove(existing_log)
 
         entry = await calendar.update_entry(entry)
         return CalendarEntryResponse.model_validate(entry)
