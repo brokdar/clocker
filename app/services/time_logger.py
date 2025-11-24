@@ -99,7 +99,7 @@ def update_time_log(
         log = entry.logs[log_index]
         log.type = type or log.type
         log.start = start or log.start
-        log.end = end or log.start
+        log.end = end or log.end
         log.pause = pause or log.pause
 
         validate_time_logs(entry.logs)
