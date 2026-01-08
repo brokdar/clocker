@@ -291,3 +291,53 @@ class Calendar:
         for day in self.iterate(start, end):
             if is_work_day(day):
                 yield day
+
+    async def get_available_vacation_dates(self, start: date, end: date) -> list[date]:
+        """Get dates available for vacation entries in a range.
+
+        Filters out:
+        - Weekends (Saturday/Sunday)
+        - Existing holidays (CalendarEntryType.HOLIDAY)
+        - Dates with any existing entries
+
+        Args:
+            start (date): Start date of range (inclusive).
+            end (date): End date of range (inclusive).
+
+        Returns:
+            list[date]: List of dates available for vacation entries.
+        """
+        existing_entries = await self._repository.get_by_date_range(start, end)
+        available_dates: list[date] = []
+
+        for day in self.workdays(start, end):
+            if day in existing_entries:
+                continue
+            available_dates.append(day)
+
+        return available_dates
+
+    async def create_vacation_entries(
+        self, start: date, end: date
+    ) -> list[CalendarEntry]:
+        """Create vacation entries for a date range.
+
+        Automatically skips:
+        - Weekends (Saturday/Sunday)
+        - Existing holidays (CalendarEntryType.HOLIDAY)
+        - Dates with any existing entries
+
+        Args:
+            start (date): Start date of range (inclusive).
+            end (date): End date of range (inclusive).
+
+        Returns:
+            list[CalendarEntry]: List of created vacation entries.
+        """
+        available_dates = await self.get_available_vacation_dates(start, end)
+        entries = [
+            CalendarEntry(day=day, type=CalendarEntryType.VACATION, logs=[])
+            for day in available_dates
+        ]
+
+        return await self._repository.save_all(entries)
