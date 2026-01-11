@@ -55,6 +55,29 @@ class Calendar:
         """
         self._repository = repository
 
+    async def _auto_load_holidays_if_needed(
+        self, year: int, entries: dict[date, CalendarEntry]
+    ) -> None:
+        """Auto-load holidays for next year if none exist.
+
+        Only auto-loads if:
+        - Year is exactly current_year + 1
+        - No holiday entries exist in the provided entries
+
+        Args:
+            year (int): The year to check.
+            entries (dict[date, CalendarEntry]): Existing entries (modified in-place).
+        """
+        current_year = date.today().year
+        if year != current_year + 1:
+            return
+
+        if any(entry.type == CalendarEntryType.HOLIDAY for entry in entries.values()):
+            return
+
+        holiday_entries = await self.add_public_holidays(year, "BW")
+        entries.update({entry.day: entry for entry in holiday_entries})
+
     async def get_by_date(self, day: date) -> CalendarEntry | None:
         """Retrieve a calendar entry for a specific date.
 
@@ -69,6 +92,8 @@ class Calendar:
     async def get_month(self, year: int, month: int) -> dict[date, CalendarEntry]:
         """Retrieve all calendar entries for a specific month.
 
+        Auto-loads holidays for next year if none exist.
+
         Args:
             year (int): The year to get entries for.
             month (int): The month to get entries for (1-12).
@@ -81,6 +106,7 @@ class Calendar:
         end_date = date(year, month, last_day)
 
         entries = await self._repository.get_by_date_range(start_date, end_date)
+        await self._auto_load_holidays_if_needed(year, entries)
         logger.debug(
             f"Retrieved calendar entries of {year}/{month}", extra={"entries": entries}
         )
@@ -88,6 +114,8 @@ class Calendar:
 
     async def get_year(self, year: int) -> dict[date, CalendarEntry]:
         """Retrieve all calendar entries for an entire year.
+
+        Auto-loads holidays for next year if none exist.
 
         Args:
             year (int): The year to get entries for.
@@ -99,12 +127,7 @@ class Calendar:
         end_date = date(year, 12, 31)
 
         entries = await self._repository.get_by_date_range(start_date, end_date)
-        if not any(
-            entry.type == CalendarEntryType.HOLIDAY for entry in entries.values()
-        ):
-            holiday_entries = await self.add_public_holidays(year, "BW")
-            entries.update({entry.day: entry for entry in holiday_entries})
-
+        await self._auto_load_holidays_if_needed(year, entries)
         logger.debug(
             f"Retrieved calendar entries of {year}", extra={"entries": entries}
         )
