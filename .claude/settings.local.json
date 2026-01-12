@@ -3,8 +3,11 @@
     "allow": [
       "Bash(find:*)",
       "Bash(uv run:*)",
-      "mcp__sequentialthinking__sequentialthinking"
+      "mcp__sequentialthinking__sequentialthinking",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)"
     ],
-    "deny": []
+    "deny": [],
+    "includeCoAuthoredBy": false
   }
 }

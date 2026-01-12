@@ -1287,6 +1287,149 @@ class TestCalendarHolidayOperations:
         assert result == []
 
 
+class TestVacationEntryCreation:
+    """Test suite for vacation entry creation with weekend and holiday filtering."""
+
+    @pytest.mark.asyncio
+    async def test_gets_available_vacation_dates_skips_weekends(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test available vacation dates skips weekends."""
+        start = date(2024, 11, 18)  # Monday
+        end = date(2024, 11, 24)  # Sunday
+        mock_calendar_repository.get_by_date_range.return_value = {}
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_available_vacation_dates(start, end)
+
+        # Should only have 5 weekdays (Mon-Fri)
+        assert len(result) == 5
+        assert date(2024, 11, 23) not in result  # Saturday
+        assert date(2024, 11, 24) not in result  # Sunday
+
+    @pytest.mark.asyncio
+    async def test_gets_available_vacation_dates_skips_holidays(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test available vacation dates skips existing holidays."""
+        start = date(2024, 11, 18)  # Monday
+        end = date(2024, 11, 22)  # Friday
+        holiday_entry = CalendarEntry(
+            day=date(2024, 11, 20), type=CalendarEntryType.HOLIDAY, logs=[]
+        )
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(2024, 11, 20): holiday_entry
+        }
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_available_vacation_dates(start, end)
+
+        # Should have 4 weekdays (Wed holiday excluded)
+        assert len(result) == 4
+        assert date(2024, 11, 20) not in result
+
+    @pytest.mark.asyncio
+    async def test_gets_available_vacation_dates_skips_existing_entries(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test available vacation dates skips any existing entries."""
+        start = date(2024, 11, 18)  # Monday
+        end = date(2024, 11, 22)  # Friday
+        work_entry = CalendarEntry(
+            day=date(2024, 11, 19), type=CalendarEntryType.WORK, logs=[]
+        )
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(2024, 11, 19): work_entry
+        }
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_available_vacation_dates(start, end)
+
+        # Should have 4 weekdays (Tue work entry excluded)
+        assert len(result) == 4
+        assert date(2024, 11, 19) not in result
+
+    @pytest.mark.asyncio
+    async def test_creates_vacation_entries_skips_weekends(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test vacation entries creation skips weekends."""
+        start = date(2024, 11, 18)  # Monday
+        end = date(2024, 11, 24)  # Sunday
+        mock_calendar_repository.get_by_date_range.return_value = {}
+        mock_calendar_repository.save_all.return_value = []
+        calendar = Calendar(mock_calendar_repository)
+
+        await calendar.create_vacation_entries(start, end)
+
+        call_args = mock_calendar_repository.save_all.call_args[0][0]
+        for entry in call_args:
+            assert is_work_day(entry.day)
+            assert entry.type == CalendarEntryType.VACATION
+
+    @pytest.mark.asyncio
+    async def test_creates_vacation_entries_skips_holidays(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test vacation entries creation skips existing holidays."""
+        start = date(2024, 11, 18)  # Monday
+        end = date(2024, 11, 22)  # Friday
+        holiday_entry = CalendarEntry(
+            day=date(2024, 11, 20), type=CalendarEntryType.HOLIDAY, logs=[]
+        )
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(2024, 11, 20): holiday_entry
+        }
+        mock_calendar_repository.save_all.return_value = []
+        calendar = Calendar(mock_calendar_repository)
+
+        await calendar.create_vacation_entries(start, end)
+
+        call_args = mock_calendar_repository.save_all.call_args[0][0]
+        dates_created = [e.day for e in call_args]
+        assert date(2024, 11, 20) not in dates_created
+
+    @pytest.mark.asyncio
+    async def test_creates_vacation_entries_returns_created_entries(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test vacation entries creation returns saved entries."""
+        start = date(2024, 11, 18)  # Monday
+        end = date(2024, 11, 19)  # Tuesday
+        expected_entries = [
+            CalendarEntry(
+                day=date(2024, 11, 18), type=CalendarEntryType.VACATION, logs=[]
+            ),
+            CalendarEntry(
+                day=date(2024, 11, 19), type=CalendarEntryType.VACATION, logs=[]
+            ),
+        ]
+        mock_calendar_repository.get_by_date_range.return_value = {}
+        mock_calendar_repository.save_all.return_value = expected_entries
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.create_vacation_entries(start, end)
+
+        assert result == expected_entries
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_creates_vacation_entries_returns_empty_when_all_filtered(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test vacation entries creation returns empty list when all dates filtered."""
+        # Weekend only range
+        start = date(2024, 11, 23)  # Saturday
+        end = date(2024, 11, 24)  # Sunday
+        mock_calendar_repository.get_by_date_range.return_value = {}
+        mock_calendar_repository.save_all.return_value = []
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.create_vacation_entries(start, end)
+
+        assert result == []
+
+
 class TestCalendarIterators:
     """Test suite for calendar iterator methods."""
 

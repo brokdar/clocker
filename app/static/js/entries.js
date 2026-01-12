@@ -25,22 +25,51 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function updateRangePreview() {
+    async function updateRangePreview() {
         if (!fromDate.value || !toDate.value) {
             rangePreview.textContent = '';
             return;
         }
 
-        const dates = generateDateRange(new Date(fromDate.value), new Date(toDate.value));
-        const filteredDates = entryType.value === 'work' ? dates.filter(d => !isWeekend(d)) : dates;
+        const type = entryType.value;
 
-        if (filteredDates.length === 0) {
-            rangePreview.innerHTML = '<span class="preview-warning">No valid dates in range</span>';
-        } else if (filteredDates.length > 10) {
-            rangePreview.innerHTML = `<span class="preview-info">Will create ${filteredDates.length} entries</span>`;
+        if (type === 'vacation') {
+            // Use backend preview for vacation (handles weekends and holidays)
+            rangePreview.innerHTML = '<span class="preview-info">Loading...</span>';
+            try {
+                const response = await fetch(
+                    `/api/v1/entries/batch/vacation/preview?start_date=${fromDate.value}&end_date=${toDate.value}`
+                );
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.available_count === 0) {
+                        rangePreview.innerHTML = '<span class="preview-warning">No valid dates in range (weekends and holidays excluded)</span>';
+                    } else if (data.available_count > 10) {
+                        rangePreview.innerHTML = `<span class="preview-info">Will create ${data.available_count} entries (weekends and holidays excluded)</span>`;
+                    } else {
+                        const datesList = data.available_dates.map(d => new Date(d).toLocaleDateString()).join(', ');
+                        rangePreview.innerHTML = `<span class="preview-info">Dates: ${datesList}</span>`;
+                    }
+                } else {
+                    rangePreview.innerHTML = '<span class="preview-error">Error loading preview</span>';
+                }
+            } catch (error) {
+                rangePreview.innerHTML = '<span class="preview-error">Error loading preview</span>';
+            }
         } else {
-            const datesList = filteredDates.map(d => d.toLocaleDateString()).join(', ');
-            rangePreview.innerHTML = `<span class="preview-info">Dates: ${datesList}</span>`;
+            // Client-side preview for work type (weekends only)
+            const dates = generateDateRange(new Date(fromDate.value), new Date(toDate.value));
+            const filteredDates = type === 'work' ? dates.filter(d => !isWeekend(d)) : dates;
+
+            if (filteredDates.length === 0) {
+                rangePreview.innerHTML = '<span class="preview-warning">No valid dates in range</span>';
+            } else if (filteredDates.length > 10) {
+                rangePreview.innerHTML = `<span class="preview-info">Will create ${filteredDates.length} entries</span>`;
+            } else {
+                const datesList = filteredDates.map(d => d.toLocaleDateString()).join(', ');
+                rangePreview.innerHTML = `<span class="preview-info">Dates: ${datesList}</span>`;
+            }
         }
     }
 
@@ -235,8 +264,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function createRangeEntries() {
+        const type = entryType.value;
+
+        // Use batch endpoint for vacation (handles weekends and holidays on backend)
+        if (type === 'vacation') {
+            const progressIndicator = await createProgressIndicator();
+
+            try {
+                const response = await fetch('/api/v1/entries/batch/vacation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        start_date: fromDate.value,
+                        end_date: toDate.value
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to create vacation entries');
+                }
+
+                const results = data.created_entries.map(e => ({ date: e.day, success: true }));
+                updateProgress(data.created_count, data.created_count, results);
+                return results;
+            } catch (error) {
+                updateProgress(0, 0, [{ date: 'batch', success: false, error: error.message }]);
+                throw error;
+            }
+        }
+
+        // Original logic for other entry types (work, etc.)
         const dates = generateDateRange(new Date(fromDate.value), new Date(toDate.value));
-        const filteredDates = entryType.value === 'work' ? dates.filter(d => !isWeekend(d)) : dates;
+        const filteredDates = type === 'work' ? dates.filter(d => !isWeekend(d)) : dates;
 
         if (filteredDates.length === 0) {
             throw new Error('No valid dates in range');
@@ -257,8 +317,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     body: JSON.stringify({
                         day: dateStr,
-                        type: entryType.value,
-                        logs: entryType.value === 'work' ? collectFormData().logs : []
+                        type: type,
+                        logs: type === 'work' ? collectFormData().logs : []
                     })
                 });
 

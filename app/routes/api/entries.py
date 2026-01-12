@@ -1,6 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlmodel import SQLModel
 
 from app.dependencies import get_calendar
 from app.model import (
@@ -45,6 +46,27 @@ class CalendarEntryUpdate(CalendarEntryBase):
     """Query model for updating a calendar entry."""
 
     logs: list[TimeLogUpdate] = []
+
+
+class VacationRangeRequest(SQLModel):
+    """Request model for batch vacation creation."""
+
+    start_date: date
+    end_date: date
+
+
+class VacationRangePreview(SQLModel):
+    """Response model for vacation range preview."""
+
+    available_count: int
+    available_dates: list[date]
+
+
+class BatchCreationResult(SQLModel):
+    """Response model for batch creation results."""
+
+    created_count: int
+    created_entries: list[CalendarEntryResponse]
 
 
 router = APIRouter(prefix="/entries", tags=["entries"])
@@ -264,3 +286,64 @@ async def delete_entry(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         ) from e
+
+
+@router.get("/batch/vacation/preview")
+async def preview_vacation_range(
+    start_date: date = Query(..., description="Start date of vacation range"),
+    end_date: date = Query(..., description="End date of vacation range"),
+    calendar: Calendar = Depends(get_calendar),
+) -> VacationRangePreview:
+    """Preview available dates for vacation range.
+
+    Returns the count and list of dates that would receive vacation entries,
+    excluding weekends, holidays, and existing entries.
+
+    Args:
+        start_date (date): The start date of the vacation range.
+        end_date (date): The end date of the vacation range.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        VacationRangePreview: Preview showing available dates and count.
+    """
+    if end_date < start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End date must not be before start date",
+        )
+
+    available_dates = await calendar.get_available_vacation_dates(start_date, end_date)
+    return VacationRangePreview(
+        available_count=len(available_dates),
+        available_dates=available_dates,
+    )
+
+
+@router.post("/batch/vacation")
+async def create_vacation_range(
+    data: VacationRangeRequest,
+    calendar: Calendar = Depends(get_calendar),
+) -> BatchCreationResult:
+    """Create vacation entries for a date range.
+
+    Automatically skips weekends, holidays, and dates with existing entries.
+
+    Args:
+        data (VacationRangeRequest): The vacation range request data.
+        calendar (Calendar): Calendar service for data access.
+
+    Returns:
+        BatchCreationResult: Result containing created entries.
+    """
+    if data.end_date < data.start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End date must not be before start date",
+        )
+
+    entries = await calendar.create_vacation_entries(data.start_date, data.end_date)
+    return BatchCreationResult(
+        created_count=len(entries),
+        created_entries=[CalendarEntryResponse.model_validate(e) for e in entries],
+    )
