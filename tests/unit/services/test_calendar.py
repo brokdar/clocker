@@ -180,47 +180,166 @@ class TestCalendarGetOperations:
         )
 
     @pytest.mark.asyncio
-    async def test_adds_public_holidays_when_getting_year_without_holidays(
+    async def test_adds_public_holidays_when_getting_next_year_without_holidays(
         self, mock_calendar_repository: AsyncMock
     ) -> None:
-        """Test public holidays added when retrieving year without holidays."""
+        """Test public holidays added when retrieving next year without holidays."""
+        next_year = date.today().year + 1
         work_entry = CalendarEntry(
-            day=date(2024, 6, 15), type=CalendarEntryType.WORK, logs=[]
+            day=date(next_year, 6, 15), type=CalendarEntryType.WORK, logs=[]
         )
         holiday_entries = [
             CalendarEntry(
-                day=date(2024, 1, 1), type=CalendarEntryType.HOLIDAY, logs=[]
+                day=date(next_year, 1, 1), type=CalendarEntryType.HOLIDAY, logs=[]
             ),
         ]
         mock_calendar_repository.get_by_date_range.return_value = {
-            date(2024, 6, 15): work_entry
+            date(next_year, 6, 15): work_entry
         }
         mock_calendar_repository.get_by_date.return_value = None
         mock_calendar_repository.save_all.return_value = holiday_entries
         calendar = Calendar(mock_calendar_repository)
 
-        result = await calendar.get_year(2024)
+        result = await calendar.get_year(next_year)
 
-        assert date(2024, 1, 1) in result
-        assert date(2024, 6, 15) in result
+        assert date(next_year, 1, 1) in result
+        assert date(next_year, 6, 15) in result
 
     @pytest.mark.asyncio
     async def test_skips_adding_holidays_when_already_present(
         self, mock_calendar_repository: AsyncMock
     ) -> None:
-        """Test holidays not added when year already has holidays."""
+        """Test holidays not added when next year already has holidays."""
+        next_year = date.today().year + 1
         entries = {
-            date(2024, 1, 1): CalendarEntry(
-                day=date(2024, 1, 1), type=CalendarEntryType.HOLIDAY, logs=[]
+            date(next_year, 1, 1): CalendarEntry(
+                day=date(next_year, 1, 1), type=CalendarEntryType.HOLIDAY, logs=[]
             ),
         }
         mock_calendar_repository.get_by_date_range.return_value = entries
         calendar = Calendar(mock_calendar_repository)
 
-        result = await calendar.get_year(2024)
+        result = await calendar.get_year(next_year)
 
-        assert date(2024, 1, 1) in result
+        assert date(next_year, 1, 1) in result
         mock_calendar_repository.save_all.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_adds_public_holidays_when_getting_current_year_without_holidays(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test public holidays added when retrieving current year without holidays."""
+        current_year = date.today().year
+        work_entry = CalendarEntry(
+            day=date(current_year, 6, 15), type=CalendarEntryType.WORK, logs=[]
+        )
+        holiday_entries = [
+            CalendarEntry(
+                day=date(current_year, 1, 1), type=CalendarEntryType.HOLIDAY, logs=[]
+            ),
+        ]
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(current_year, 6, 15): work_entry
+        }
+        mock_calendar_repository.get_by_date.return_value = None
+        mock_calendar_repository.save_all.return_value = holiday_entries
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_year(current_year)
+
+        assert date(current_year, 1, 1) in result
+        assert date(current_year, 6, 15) in result
+
+    @pytest.mark.asyncio
+    async def test_skips_adding_holidays_for_far_future_year(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test holidays not added when retrieving year beyond next year."""
+        far_future_year = date.today().year + 2
+        work_entry = CalendarEntry(
+            day=date(far_future_year, 6, 15), type=CalendarEntryType.WORK, logs=[]
+        )
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(far_future_year, 6, 15): work_entry
+        }
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_year(far_future_year)
+
+        assert date(far_future_year, 6, 15) in result
+        mock_calendar_repository.save_all.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_auto_load_holidays_handles_exception_gracefully(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test that holiday loading errors don't break page rendering."""
+        current_year = date.today().year
+        work_entry = CalendarEntry(
+            day=date(current_year, 6, 15), type=CalendarEntryType.WORK, logs=[]
+        )
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(current_year, 6, 15): work_entry
+        }
+        mock_calendar_repository.get_by_date.side_effect = Exception("Database error")
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_year(current_year)
+
+        assert date(current_year, 6, 15) in result
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_month_adds_holidays_for_next_year(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test get_month auto-loads holidays when retrieving month in next year."""
+        next_year = date.today().year + 1
+        work_entry = CalendarEntry(
+            day=date(next_year, 1, 15), type=CalendarEntryType.WORK, logs=[]
+        )
+        holiday_entries = [
+            CalendarEntry(
+                day=date(next_year, 1, 1), type=CalendarEntryType.HOLIDAY, logs=[]
+            ),
+        ]
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(next_year, 1, 15): work_entry
+        }
+        mock_calendar_repository.get_by_date.return_value = None
+        mock_calendar_repository.save_all.return_value = holiday_entries
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_month(next_year, 1)
+
+        assert date(next_year, 1, 1) in result
+        assert date(next_year, 1, 15) in result
+
+    @pytest.mark.asyncio
+    async def test_get_month_adds_holidays_for_current_year(
+        self, mock_calendar_repository: AsyncMock
+    ) -> None:
+        """Test get_month auto-loads holidays when retrieving month in current year."""
+        current_year = date.today().year
+        work_entry = CalendarEntry(
+            day=date(current_year, 1, 15), type=CalendarEntryType.WORK, logs=[]
+        )
+        holiday_entries = [
+            CalendarEntry(
+                day=date(current_year, 1, 1), type=CalendarEntryType.HOLIDAY, logs=[]
+            ),
+        ]
+        mock_calendar_repository.get_by_date_range.return_value = {
+            date(current_year, 1, 15): work_entry
+        }
+        mock_calendar_repository.get_by_date.return_value = None
+        mock_calendar_repository.save_all.return_value = holiday_entries
+        calendar = Calendar(mock_calendar_repository)
+
+        result = await calendar.get_month(current_year, 1)
+
+        assert date(current_year, 1, 1) in result
+        assert date(current_year, 1, 15) in result
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
