@@ -58,10 +58,10 @@ class Calendar:
     async def _auto_load_holidays_if_needed(
         self, year: int, entries: dict[date, CalendarEntry]
     ) -> None:
-        """Auto-load holidays for next year if none exist.
+        """Auto-load holidays for current or next year if none exist.
 
         Only auto-loads if:
-        - Year is exactly current_year + 1
+        - Year is current_year or current_year + 1
         - No holiday entries exist in the provided entries
 
         Args:
@@ -69,14 +69,17 @@ class Calendar:
             entries (dict[date, CalendarEntry]): Existing entries (modified in-place).
         """
         current_year = date.today().year
-        if year != current_year + 1:
+        if year not in (current_year, current_year + 1):
             return
 
         if any(entry.type == CalendarEntryType.HOLIDAY for entry in entries.values()):
             return
 
-        holiday_entries = await self.add_public_holidays(year, "BW")
-        entries.update({entry.day: entry for entry in holiday_entries})
+        try:
+            holiday_entries = await self.add_public_holidays(year, "BW")
+            entries.update({entry.day: entry for entry in holiday_entries})
+        except Exception:
+            logger.warning(f"Failed to auto-load holidays for {year}", exc_info=True)
 
     async def get_by_date(self, day: date) -> CalendarEntry | None:
         """Retrieve a calendar entry for a specific date.
@@ -92,7 +95,7 @@ class Calendar:
     async def get_month(self, year: int, month: int) -> dict[date, CalendarEntry]:
         """Retrieve all calendar entries for a specific month.
 
-        Auto-loads holidays for next year if none exist.
+        Auto-loads holidays for current or next year if none exist.
 
         Args:
             year (int): The year to get entries for.
@@ -115,7 +118,7 @@ class Calendar:
     async def get_year(self, year: int) -> dict[date, CalendarEntry]:
         """Retrieve all calendar entries for an entire year.
 
-        Auto-loads holidays for next year if none exist.
+        Auto-loads holidays for current or next year if none exist.
 
         Args:
             year (int): The year to get entries for.
