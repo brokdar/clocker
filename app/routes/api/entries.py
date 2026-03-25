@@ -150,7 +150,9 @@ async def create_entry(
     try:
         entry = await calendar.create_entry(date, data.type)
         for log in data.logs:
-            time_logger.add_time_log(entry, log.type, log.start, log.end, log.pause)
+            time_logger.add_time_log(
+                entry, log.type, log.start, log.end, log.pause, log.counts_as_work
+            )
         entry = await calendar.update_entry(entry)
         return CalendarEntryResponse.model_validate(entry)
     except TimeLogError as e:
@@ -205,11 +207,19 @@ async def update_entry(
                 # Handle updated existing time logs
                 log_index = entry.logs.index(existing_logs[log.id])
                 time_logger.update_time_log(
-                    entry, log_index, log.type, log.start, log.end, log.pause
+                    entry,
+                    log_index,
+                    log.type,
+                    log.start,
+                    log.end,
+                    log.pause,
+                    log.counts_as_work,
                 )
             else:
                 # Handle new time logs
-                time_logger.add_time_log(entry, log.type, log.start, log.end, log.pause)
+                time_logger.add_time_log(
+                    entry, log.type, log.start, log.end, log.pause, log.counts_as_work
+                )
 
         entry = await calendar.update_entry(entry)
         return CalendarEntryResponse.model_validate(entry)
@@ -245,11 +255,16 @@ async def copy_entry(
             )
 
         # Extract log data while still in async context to avoid lazy loading issues
-        log_data = [(log.type, log.start, log.end, log.pause) for log in entry.logs]
+        log_data = [
+            (log.type, log.start, log.end, log.pause, log.counts_as_work)
+            for log in entry.logs
+        ]
 
         new_entry = await calendar.create_entry(target_date, entry.type)
-        for log_type, start, end, pause in log_data:
-            time_logger.add_time_log(new_entry, log_type, start, end, pause)
+        for log_type, start, end, pause, counts_as_work in log_data:
+            time_logger.add_time_log(
+                new_entry, log_type, start, end, pause, counts_as_work
+            )
 
         new_entry = await calendar.update_entry(new_entry)
         return CalendarEntryResponse.model_validate(new_entry)

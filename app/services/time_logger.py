@@ -45,6 +45,7 @@ def add_time_log(
     start: time,
     end: time | None = None,
     pause: timedelta = timedelta(0),
+    counts_as_work: bool = False,
 ) -> None:
     """Adds a new time log to the calendar entry.
 
@@ -54,6 +55,7 @@ def add_time_log(
         start (time): Start time
         end (time | None, optional): End time. Defaults to None.
         pause (timedelta, optional): Pause duration. Defaults to timedelta(0).
+        counts_as_work (bool, optional): Whether travel time counts toward work hours. Defaults to False.
 
     Raises:
         TimeLogError: If the entry type is not work or if the time log is invalid
@@ -64,7 +66,9 @@ def add_time_log(
         )
 
     try:
-        log = TimeLog(type=type, start=start, end=end, pause=pause)
+        log = TimeLog(
+            type=type, start=start, end=end, pause=pause, counts_as_work=counts_as_work
+        )
         entry.logs.append(log)
         validate_time_logs(entry.logs)
         logger.info(f"Added time log to {entry.day}: {log}")
@@ -79,6 +83,7 @@ def update_time_log(
     start: time | None = None,
     end: time | None = None,
     pause: timedelta | None = None,
+    counts_as_work: bool | None = None,
 ) -> None:
     """Updates an existing time log in the calendar entry.
 
@@ -89,6 +94,7 @@ def update_time_log(
         start (time | None, optional): New start time. Defaults to None.
         end (time | None, optional): New end time. Defaults to None.
         pause (timedelta | None, optional): New pause duration. Defaults to None.
+        counts_as_work (bool | None, optional): Whether travel time counts toward work hours. Defaults to None (preserves existing value).
 
     Raises:
         TimeLogError: If the index is invalid or if the updated log would be invalid
@@ -101,6 +107,8 @@ def update_time_log(
         log.start = start or log.start
         log.end = end or log.end
         log.pause = pause or log.pause
+        if counts_as_work is not None:
+            log.counts_as_work = counts_as_work
 
         validate_time_logs(entry.logs)
         logger.info(f"Updated time log [{log_index}] for {entry.day}: {log}")

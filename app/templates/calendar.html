@@ -64,7 +64,7 @@
                     <th>Weekday</th>
                     <th>Date</th>
                     <th data-tooltip="Type of entry (work, vacation, sick, holiday, flextime)">Type</th>
-                    <th data-tooltip="W: Work, T: Travel">Log</th>
+                    <th data-tooltip="W: Work, T: Travel, T*: Travel (counts as work)">Log</th>
                     <th data-tooltip="Start time of work">Start</th>
                     <th data-tooltip="End time of work">End</th>
                     <th data-tooltip="Break duration">Pause</th>
@@ -93,7 +93,7 @@
                     <td>
                         {% if entry and entry.logs %}
                         {% for log in entry.logs %}
-                        <span class="log-row">{{ log.type[0]|upper }}</span>
+                        <span class="log-row" title="{{ 'Travel (counts as work)' if log.type == 'travel' and log.counts_as_work else log.type|capitalize }}">{{ log.type[0]|upper }}{% if log.type == 'travel' and log.counts_as_work %}*{% endif %}</span>
                         {% endfor %}
                         {% endif %}
                     </td>

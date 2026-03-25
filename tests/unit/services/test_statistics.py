@@ -1946,3 +1946,110 @@ class TestEdgeCases:
         assert stats.entry_counts.vacation == 1
         assert stats.entry_counts.holiday == 1
         assert stats.entry_counts.sick == 1
+
+
+class TestBillableTravel:
+    """Test suite for counts_as_work flag on travel logs in statistics."""
+
+    def test_billable_travel_adds_to_total_work_hours(
+        self, statistics_service: StatisticsService, weekday_date: date
+    ) -> None:
+        """Test that billable travel time is included in total work hours."""
+        entry = CalendarEntry(
+            day=weekday_date,
+            type=CalendarEntryType.WORK,
+            logs=[
+                TimeLog(
+                    type=TimeLogType.TRAVEL,
+                    start=time(8, 0),
+                    end=time(9, 0),
+                    pause=timedelta(0),
+                    counts_as_work=True,
+                ),
+                TimeLog(
+                    type=TimeLogType.WORK,
+                    start=time(9, 0),
+                    end=time(17, 0),
+                    pause=timedelta(0),
+                ),
+            ],
+        )
+        stats = statistics_service.calculate_statistics([entry])
+
+        assert stats.total_work_hours == timedelta(hours=9)
+
+    def test_non_billable_travel_excluded_from_total_work_hours(
+        self, statistics_service: StatisticsService, weekday_date: date
+    ) -> None:
+        """Test that non-billable travel time is not counted in work hours."""
+        entry = CalendarEntry(
+            day=weekday_date,
+            type=CalendarEntryType.WORK,
+            logs=[
+                TimeLog(
+                    type=TimeLogType.TRAVEL,
+                    start=time(8, 0),
+                    end=time(9, 0),
+                    pause=timedelta(0),
+                    counts_as_work=False,
+                ),
+                TimeLog(
+                    type=TimeLogType.WORK,
+                    start=time(9, 0),
+                    end=time(17, 0),
+                    pause=timedelta(0),
+                ),
+            ],
+        )
+        stats = statistics_service.calculate_statistics([entry])
+
+        assert stats.total_work_hours == timedelta(hours=8)
+
+    def test_billable_travel_affects_flextime_balance(
+        self, statistics_service: StatisticsService, weekday_date: date
+    ) -> None:
+        """Test that billable travel adds to flextime balance."""
+        entry = CalendarEntry(
+            day=weekday_date,
+            type=CalendarEntryType.WORK,
+            logs=[
+                TimeLog(
+                    type=TimeLogType.TRAVEL,
+                    start=time(8, 0),
+                    end=time(9, 0),
+                    pause=timedelta(0),
+                    counts_as_work=True,
+                ),
+                TimeLog(
+                    type=TimeLogType.WORK,
+                    start=time(9, 0),
+                    end=time(17, 0),
+                    pause=timedelta(0),
+                ),
+            ],
+        )
+        stats = statistics_service.calculate_statistics([entry])
+
+        # 9 hours worked (8h work + 1h billable travel) - 8h standard = +1h flextime
+        assert stats.flextime_balance == timedelta(hours=1)
+
+    def test_travel_day_still_counted_for_billable_travel(
+        self, statistics_service: StatisticsService, weekday_date: date
+    ) -> None:
+        """Test travel day count is still incremented even when travel counts as work."""
+        entry = CalendarEntry(
+            day=weekday_date,
+            type=CalendarEntryType.WORK,
+            logs=[
+                TimeLog(
+                    type=TimeLogType.TRAVEL,
+                    start=time(8, 0),
+                    end=time(9, 0),
+                    pause=timedelta(0),
+                    counts_as_work=True,
+                ),
+            ],
+        )
+        stats = statistics_service.calculate_statistics([entry])
+
+        assert stats.entry_counts.travel == 1

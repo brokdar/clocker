@@ -1,6 +1,7 @@
 from datetime import date
 from pathlib import Path
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -128,6 +129,15 @@ class CalendarRepository:
 
 
 async def create_database() -> None:
-    """Initialize the database by creating all required tables."""
+    """Initialize the database by creating all required tables and running migrations."""
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        # Migration: add counts_as_work column if it doesn't exist (for existing databases)
+        result = await conn.execute(text("PRAGMA table_info(time_log)"))
+        columns = {row[1] for row in result.fetchall()}
+        if "counts_as_work" not in columns:
+            await conn.execute(
+                text(
+                    "ALTER TABLE time_log ADD COLUMN counts_as_work BOOLEAN NOT NULL DEFAULT 0"
+                )
+            )

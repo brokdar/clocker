@@ -85,13 +85,24 @@
                         {% for log in entry.logs %}
                         <tr>
                             <td>
-                                <div class="time-log" data-index="{{ loop.index0 }}">
+                                <div class="time-log log-type-cell" data-index="{{ loop.index0 }}">
                                     <input type="hidden" name="logs[{{ loop.index0 }}].id"
                                         value="{{ log.id if log else '' }}">
                                     <select name="logs[{{ loop.index0 }}].type" class="log-type-select">
                                         <option value="work" {{ 'selected' if log.type=='work' }}>Work</option>
                                         <option value="travel" {{ 'selected' if log.type=='travel' }}>Travel</option>
                                     </select>
+                                    <label class="counts-as-work-label {{ '' if log.type=='travel' else 'hidden' }}"
+                                           title="Count this travel toward work time">
+                                        <span class="switch">
+                                            <input type="checkbox"
+                                                   class="counts-as-work-toggle"
+                                                   data-log-id="{{ log.id if log.id else '' }}"
+                                                   {{ 'checked' if log.counts_as_work }}>
+                                            <span class="switch-slider"></span>
+                                        </span>
+                                        Work time
+                                    </label>
                                 </div>
                             </td>
                             <td><input type="time" name="logs[{{ loop.index0 }}].start"

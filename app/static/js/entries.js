@@ -140,6 +140,49 @@ document.addEventListener('DOMContentLoaded', function() {
         timeInputs.forEach(input => {
             input.addEventListener('change', () => calculateDuration(row));
         });
+
+        const typeSelect = row.querySelector('.log-type-select');
+        const countsAsWorkLabel = row.querySelector('.counts-as-work-label');
+        const countsAsWorkToggle = row.querySelector('.counts-as-work-toggle');
+
+        if (typeSelect && countsAsWorkLabel) {
+            typeSelect.addEventListener('change', () => {
+                if (typeSelect.value === 'travel') {
+                    countsAsWorkLabel.classList.remove('hidden');
+                } else {
+                    countsAsWorkLabel.classList.add('hidden');
+                    if (countsAsWorkToggle) countsAsWorkToggle.checked = false;
+                }
+            });
+        }
+
+        if (countsAsWorkToggle) {
+            countsAsWorkToggle.addEventListener('change', async () => {
+                const logId = countsAsWorkToggle.dataset.logId;
+                if (!logId) return; // New unsaved log — will be submitted with the form
+                const date = window.location.pathname.split('/').filter(Boolean)[1];
+                const errorMessage = document.getElementById('errorMessage');
+                try {
+                    const response = await fetch(`/api/v1/entries/${date}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(collectFormData())
+                    });
+                    if (!response.ok) {
+                        countsAsWorkToggle.checked = !countsAsWorkToggle.checked; // revert
+                        const data = await response.json();
+                        errorMessage.textContent = formatErrorMessage(data);
+                        errorMessage.removeAttribute('hidden');
+                    } else {
+                        errorMessage.setAttribute('hidden', '');
+                    }
+                } catch {
+                    countsAsWorkToggle.checked = !countsAsWorkToggle.checked; // revert
+                    errorMessage.textContent = 'NETWORK_ERROR: Unable to connect to the server.';
+                    errorMessage.removeAttribute('hidden');
+                }
+            });
+        }
     }
 
     // Add listeners to existing rows
@@ -153,12 +196,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>
-                <div class="time-log" data-index="${newIndex}">
+                <div class="time-log log-type-cell" data-index="${newIndex}">
                     <input type="hidden" name="logs[${newIndex}].id" value="">
                     <select name="logs[${newIndex}].type" class="log-type-select">
                         <option value="work">Work</option>
                         <option value="travel">Travel</option>
                     </select>
+                    <label class="counts-as-work-label hidden" title="Count this travel toward work time">
+                        <span class="switch">
+                            <input type="checkbox" class="counts-as-work-toggle" data-log-id="">
+                            <span class="switch-slider"></span>
+                        </span>
+                        Work time
+                    </label>
                 </div>
             </td>
             <td><input type="time" name="logs[${newIndex}].start" class="time-input" required></td>
@@ -189,7 +239,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: row.querySelector(`select[name="logs[${index}].type"]`).value,
                 start: row.querySelector(`input[name="logs[${index}].start"]`).value,
                 end: row.querySelector(`input[name="logs[${index}].end"]`).value,
-                pause: row.querySelector(`input[name="logs[${index}].pause"]`).value || "00:00"
+                pause: row.querySelector(`input[name="logs[${index}].pause"]`).value || "00:00",
+                counts_as_work: row.querySelector('.counts-as-work-toggle')?.checked ?? false
             };
         });
 

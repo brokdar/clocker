@@ -36,6 +36,7 @@ class TimeLogBase(SQLModel):
     start: time
     end: time | None = None
     pause: timedelta = timedelta(0)
+    counts_as_work: bool = False
 
     @model_validator(mode="after")
     def validate_log(self) -> Self:
@@ -205,7 +206,9 @@ def calculate_duration(
 
     total_duration = timedelta(0)
     for log in logs:
-        if log.type == TimeLogType.WORK:
+        if log.type == TimeLogType.WORK or (
+            log.type == TimeLogType.TRAVEL and log.counts_as_work
+        ):
             total_duration += log.duration
     return total_duration
 
@@ -225,7 +228,12 @@ def calculate_pause_time(
     if entry_type != CalendarEntryType.WORK:
         return None
 
-    work_logs = [log for log in logs if log.type == TimeLogType.WORK]
+    work_logs = [
+        log
+        for log in logs
+        if log.type == TimeLogType.WORK
+        or (log.type == TimeLogType.TRAVEL and log.counts_as_work)
+    ]
 
     # Sum explicit pause times from logs
     total_pause_time = sum((log.pause for log in work_logs), start=timedelta(0))

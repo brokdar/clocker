@@ -529,6 +529,123 @@ class TestRemoveTimeLog:
         assert len(work_entry_empty.logs) == 2
 
 
+class TestCountsAsWork:
+    """Test suite for counts_as_work flag on time logs."""
+
+    def test_adds_travel_log_with_counts_as_work_true(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test adding billable travel log sets counts_as_work flag."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.TRAVEL,
+            start=time(8, 0),
+            end=time(9, 0),
+            counts_as_work=True,
+        )
+
+        assert work_entry_empty.logs[0].counts_as_work is True
+
+    def test_adds_travel_log_with_counts_as_work_false_by_default(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test travel log defaults counts_as_work to False."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.TRAVEL,
+            start=time(8, 0),
+            end=time(9, 0),
+        )
+
+        assert work_entry_empty.logs[0].counts_as_work is False
+
+    def test_billable_travel_contributes_to_entry_duration(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test that billable travel log is included in entry duration."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.TRAVEL,
+            start=time(8, 0),
+            end=time(9, 0),
+            counts_as_work=True,
+        )
+
+        assert work_entry_empty.duration == timedelta(hours=1)
+
+    def test_non_billable_travel_excluded_from_entry_duration(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test that non-billable travel log is excluded from entry duration."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.TRAVEL,
+            start=time(8, 0),
+            end=time(9, 0),
+            counts_as_work=False,
+        )
+
+        assert work_entry_empty.duration == timedelta(0)
+
+    def test_update_sets_counts_as_work_to_true(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test updating a log to set counts_as_work=True."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.TRAVEL,
+            start=time(8, 0),
+            end=time(9, 0),
+            counts_as_work=False,
+        )
+        update_time_log(work_entry_empty, 0, counts_as_work=True)
+
+        assert work_entry_empty.logs[0].counts_as_work is True
+
+    def test_update_sets_counts_as_work_to_false(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test updating a log to set counts_as_work=False."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.TRAVEL,
+            start=time(8, 0),
+            end=time(9, 0),
+            counts_as_work=True,
+        )
+        update_time_log(work_entry_empty, 0, counts_as_work=False)
+
+        assert work_entry_empty.logs[0].counts_as_work is False
+
+    def test_update_preserves_counts_as_work_when_none(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test that counts_as_work is preserved when None is passed."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.TRAVEL,
+            start=time(8, 0),
+            end=time(9, 0),
+            counts_as_work=True,
+        )
+        update_time_log(work_entry_empty, 0, counts_as_work=None)
+
+        assert work_entry_empty.logs[0].counts_as_work is True
+
+    def test_work_log_counts_as_work_ignored_in_duration(
+        self, work_entry_empty: CalendarEntry
+    ) -> None:
+        """Test that work-type logs always contribute to duration regardless of flag."""
+        add_time_log(
+            work_entry_empty,
+            type=TimeLogType.WORK,
+            start=time(9, 0),
+            end=time(17, 0),
+        )
+
+        assert work_entry_empty.duration == timedelta(hours=8)
+
+
 class TestTimeLogError:
     """Test suite for TimeLogError exception."""
 
